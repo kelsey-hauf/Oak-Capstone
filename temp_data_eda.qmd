@@ -1,0 +1,201 @@
+---
+title: "temp_data_eda"
+format: html
+editor: visual
+---
+
+Load Libraries
+
+```{r}
+#load libaraies
+library(tidyverse)
+library(dplyr)
+library(lattice)
+library(nlme)
+library(car)
+library(ggplot2)
+library(lubridate)
+```
+
+Load Data
+
+```{r}
+
+
+#HOBO summer contains all of the temp data for spring, summer, and fall 3/20-10/10
+
+HOBOSummer1 <- read_csv('HOBO Data Summer 2024/HB01Summer24.csv')
+HOBOSummer2 <- read_csv('HOBO Data Summer 2024/HB02Summer24.csv')
+HOBOSummer3 <- read_csv('HOBO Data Summer 2024/HB03Summer24.csv')
+HOBOSummer4 <- read_csv('HOBO Data Summer 2024/HB04Summer24.csv')
+HOBOSummer5 <- read_csv('HOBO Data Summer 2024/HB05Summer24.csv')
+HOBOSummer6 <- read_csv('HOBO Data Summer 2024/HB06Summer24.csv')
+HOBOSummer7 <- read_csv('HOBO Data Summer 2024/HB07Summer24.csv')
+HOBOSummer8 <- read_csv('HOBO Data Summer 2024/HB08Summer24.csv')
+HOBOSummer9 <- read_csv('HOBO Data Summer 2024/HB09Summer24.csv')
+HOBOSummer10 <- read_csv('HOBO Data Summer 2024/HB10Summer24.csv')
+HOBOSummer11 <- read_csv('HOBO Data Summer 2024/HB11Summer24.csv')
+HOBOSummer12 <- read_csv('HOBO Data Summer 2024/HB12Summer24.csv')
+HOBOSummer13 <- read_csv('HOBO Data Summer 2024/HB13Summer24.csv')
+HOBOSummer14 <- read_csv('HOBO Data Summer 2024/HB14Summer24.csv')
+HOBOSummer15 <- read_csv('HOBO Data Summer 2024/HB15Summer24.csv')
+HOBOSummer16 <- read_csv('HOBO Data Summer 2024/HB16Summer24.csv')
+HOBOSummer17 <- read_csv('HOBO Data Summer 2024/HB17Summer24.csv')
+HOBOSummer18 <- read_csv('HOBO Data Summer 2024/HB18Summer24.csv')
+HOBOSummer19 <- read_csv('HOBO Data Summer 2024/HB19Summer24.csv')
+HOBOSummer20 <- read_csv('HOBO Data Summer 2024/HB20Summer24.csv')
+
+# Step 1: Combine all datasets with an ID column to identify the source
+HOBOData24 <- bind_rows(
+  HOBOSummer1 = HOBOSummer1, HOBOSummer2 = HOBOSummer2, HOBOSummer3 = HOBOSummer3,
+  HOBOSummer4 = HOBOSummer4, HOBOSummer5 = HOBOSummer5, HOBOSummer6 = HOBOSummer6,
+  HOBOSummer7 = HOBOSummer7, HOBOSummer8 = HOBOSummer8, HOBOSummer9 = HOBOSummer9,
+  HOBOSummer10 = HOBOSummer10, HOBOSummer11 = HOBOSummer11, HOBOSummer12 = HOBOSummer12,
+  HOBOSummer13 = HOBOSummer13, HOBOSummer14 = HOBOSummer14, HOBOSummer15 = HOBOSummer15,
+  HOBOSummer16 = HOBOSummer16, HOBOSummer17 = HOBOSummer17, HOBOSummer18 = HOBOSummer18,
+  HOBOSummer19 = HOBOSummer19, HOBOSummer20 = HOBOSummer20,
+  .id = "Sensor"
+)
+
+# Step 2: Rename the temperature column
+HOBOData24 <- HOBOData24 |>
+  rename('Temp' = 'Temperature (°C)')
+
+# Step 3: Create a lookup table with sensor, block, and treatment information
+lookup_table <- data.frame(
+  Sensor = c("HOBOSummer1", "HOBOSummer2", "HOBOSummer3", "HOBOSummer4", "HOBOSummer5", 
+             "HOBOSummer6", "HOBOSummer7", "HOBOSummer8", "HOBOSummer9", "HOBOSummer10", 
+             "HOBOSummer11", "HOBOSummer12", "HOBOSummer13", "HOBOSummer14", "HOBOSummer15", 
+             "HOBOSummer16", "HOBOSummer17", "HOBOSummer18", "HOBOSummer19", "HOBOSummer20"),
+  Block = c(1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7),
+  Treatment = c("DT", "OA", "NR", "AC", "SA",
+                "DT", "SA", "NR", "AC", "OA",
+                "AC", "OA", "NR", "DT", "SA",
+                "DT", "NR", "OA", "AC", "SA")
+)
+
+# Step 4: Join lookup table with HOBOData24
+HOBOData24 <- HOBOData24 |>
+  left_join(lookup_table, by = "Sensor")
+
+# Step 5: Optionally, remove the Sensor column if it's no longer needed
+HOBOData24 <- HOBOData24 |>
+  select(-Sensor)
+
+HOBOData24 <- HOBOData24 |>
+  separate('Date-Time (PDT)', into = c("Date", "Time"), sep = " ")
+```
+
+Clean the data
+
+```{r}
+# create a season column
+
+    # Convert Date column to Date format if it's not already
+HOBOData24 <- HOBOData24 |>
+  mutate(
+    Date = as.Date(as.character(Date), format = "%m/%d/%Y"),  # Ensure the original Date column is used
+    Season = case_when(
+      Date >= as.Date("2024-03-20") & Date < as.Date("2024-06-21") ~ "Spring",
+      Date >= as.Date("2024-06-21") & Date < as.Date("2024-09-22") ~ "Summer",
+      Date >= as.Date("2024-09-22") & Date <= as.Date("2024-10-10") ~ "Fall",
+      TRUE ~ NA_character_
+    )
+  )
+
+# Add a Month column to the dataset
+HOBOData24 <- HOBOData24 |>
+  mutate(Month = month(Date, label = TRUE, abbr = TRUE))  # `label = TRUE` gives month name, `abbr = TRUE` gives abbreviated names
+
+```
+
+Group the data
+
+```{r}
+
+
+# Calculate average daily temperature for Fall
+avFall24Day <- HOBOData24 |>
+  filter(Season == "Fall") |>
+  group_by(Date) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+# Calculate average daily temperature for Spring
+avSpring24Day <- HOBOData24 |>
+  filter(Season == "Spring") |>
+  group_by(Date) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+# Calculate average daily temperature for Summer
+avSummer24Day <- HOBOData24 |>
+  filter(Season == "Summer") |>
+  group_by(Date) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+avg_temp <- HOBOData24 |>
+  group_by(Date, Season, Block) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+```
+
+## min man of each day
+
+```{r}
+# Summarize daily temperatures, including standard deviation
+daily_temps <- HOBOData24 |>
+  group_by(Date, Season, Block) |>
+  summarise(
+    min_temp = min(Temp, na.rm = TRUE),
+    max_temp = max(Temp, na.rm = TRUE),
+    avg_temp = mean(Temp, na.rm = TRUE),
+    sd_temp = sd(Temp, na.rm = TRUE),  # Calculate standard deviation
+    .groups = "drop"  # Prevent grouped output warning
+  )
+
+# Create the plot
+ggplot(daily_temps, aes(x = Date)) +
+  geom_point(aes(y = max_temp)) +  # Max Temp
+  geom_point(aes(y = min_temp)) +   # Min Temp
+  #facet_wrap(~ Block, ncol = 2)+
+  labs(title = "Daily Maximum and Minimum Temperatures", 
+       x = "Date",
+       y = "Temperature (°C)") 
+
+# plot for the min max at each block maybe
+
+  
+ 
+```
+
+## average temp by month
+
+```{r}
+
+
+# Calculate average temperature per month and season
+monthly_avg_temp <- HOBOData24 |>
+  group_by(Season, Month) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+monthly_avg_temp
+
+# Plot average temperature by Season
+ggplot(monthly_avg_temp, aes(x = Season, y = avg_temp, fill = Season)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Temperature by Season",
+       x = "Season",
+       y = "Average Temperature (°C)") 
+
+ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = Month)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(title = "Average Temperature by Month",
+       x = "Month",
+       y = "Average Temperature (°C)") 
+
+```
+
+Save data in RDS so i can use it in other QMDs
+
+```{r}
+saveRDS(HOBOData24, "HOBOData24.rds")
+```
