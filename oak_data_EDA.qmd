@@ -5,7 +5,7 @@ format: html
 editor: visual
 ---
 
-## Load Libraries + Data
+# Load Libraries + Data
 
 ```{r}
 #load libaraies
@@ -15,6 +15,9 @@ library(lattice)
 library(nlme)
 library(car)
 library(ggplot2)
+install.packages("DT")
+library(DT)
+
 ```
 
 ## Load + Clean Oak Data
@@ -69,7 +72,7 @@ summer24 <- summer24 |>
 
 ```
 
-## Create a data set that has the heights across seasons to compare them
+### Create a data set that has the heights across seasons to compare them
 
 ```{r}
 
@@ -106,7 +109,7 @@ seedling_height_data <- bind_rows(initial_heights, spring_heights, summer_height
 
 ```
 
-# Height
+### Height
 
 Create a graph that compares the overall heights
 
@@ -124,7 +127,7 @@ seedling_height_data |>
 
 ```
 
-Create a graph that compares the change in heights by treatment
+#### Create a graph that compares the change in heights by treatment
 
 ```{r}
 seedling_height_data |>
@@ -137,7 +140,7 @@ seedling_height_data |>
 
 ```
 
-Create a graph that compares the change in heights by block
+#### Create a graph that compares the change in heights by block
 
 ```{r}
 seedling_height_data |>
@@ -148,7 +151,7 @@ seedling_height_data |>
   geom_col(position = position_dodge())
 ```
 
-## Growth Rate 
+## Growth Rate
 
 calculate and compare the growth rates between the seasons
 
@@ -186,7 +189,7 @@ growth_rate_data |>
   )
 ```
 
-Summarize growth rate patterns across treatments/seasons
+### Summarize growth rate patterns across treatments/seasons
 
 ```{r}
 
@@ -212,7 +215,7 @@ ggplot(growth_rate_data,
 
 ```
 
-Statistical test
+### Statistical test
 
 Determine if growth rates differ significantly between treatments
 
@@ -250,7 +253,7 @@ ggplot(seedling_height_data,
 
 ```
 
-what about temperature? does it have an effect on growth rate
+### what about temperature? does it have an effect on growth rate
 
 ```{r}
 #load in temp data 
@@ -314,9 +317,49 @@ ggplot(final_data, aes(x = Avg_Temperature, y = Growth_Rate)) +
 
 ```
 
-### Leaf Data
+Now lets see if soil moisture has an effect on growth rate
 
-## Initial Leaf Count EDA 
+```{r}
+# Ensure 'Treatment' and 'Block' are factors for soil moisture dataset
+springSM$Treatment <- as.factor(springSM$Treatment)
+springSM$Block <- as.factor(springSM$Block)
+
+# Calculate the mean soil moisture (MeanVWC) as before
+springSM <- springSM |>
+  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .))) |>
+  mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3)
+
+# Ensure growth data also has 'Treatment' and 'Block' to enable merging
+growth_rate_data$Treatment <- as.factor(growth_rate_data$Treatment)
+growth_rate_data$Block <- as.factor(growth_rate_data$Block)
+
+# Merge soil moisture and growth datasets by 'Treatment' and 'Block'
+combined_data <- merge(springSM, growth_rate_data, by = c("Treatment", "Block"))
+
+# Quick look at combined dataset
+head(combined_data)
+
+# Scatter plot of MeanVWC vs Growth Rate (Height or Leaves growth)
+ggplot(combined_data, aes(x = MeanVWC, y = Growth_Rate)) +
+  geom_point(aes(color = Treatment), size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "black") +
+  labs(
+    x = "Mean Spring 2024 Volumetric Water Content",
+    y = "Growth Rate (Change in Height or Leaves)",
+    title = "Effect of Soil Moisture on Growth Rate"
+  ) 
+
+# Linear regression to assess the relationship
+model <- lm(Growth_Rate ~ MeanVWC, data = combined_data)
+summary(model)
+
+```
+
+long story short soil moisture does not have an effect on growth rate womp womp
+
+## Leaf Data
+
+### Initial Leaf Count EDA
 
 First we want to prove statistically if there is a relationship between leaf count and height
 
@@ -345,7 +388,7 @@ plot(height.lvs.lm)
 
 There is a relationship which is great!
 
-## Create a data set that has the leaf counts across seasons 
+### Create a data set that has the leaf counts across seasons
 
 ```{r}
 
@@ -373,7 +416,7 @@ print(seedling_leaf_data)
   
 ```
 
-## visualizations
+### Visualizations
 
 Leaf count across seasons
 
@@ -390,10 +433,10 @@ ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Tag)
   labs(x = "Season", y = "Leaf Count", title = "Change in Leaf Count Across Seasons") +
   theme_minimal()
 
-ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Tag)) +
+ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Treatment)) +
   geom_line() +
   geom_point() +
-  facet_wrap(~ Treatment) +  # Or replace with Block or another grouping variable
+  facet_wrap(~ Block) +  # Or replace with Block or another grouping variable
   labs(x = "Season", y = "Leaf Count", title = "Change in Leaf Count Across Seasons by Treatment") +
   theme_minimal()
 
@@ -466,13 +509,121 @@ ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
 
 ## Germination
 
-average blocks separate by treatment - effect on treatment
+total germinated seeds in each season
 
 ```{r}
+# Combine germination data for all seasons
+germination_data <- bind_rows(
+  spring24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Spring"),
+  summer24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Summer")
+)
+
+# Summarize total germinated seeds per season
+germination_summary <- germination_data |>
+  group_by(Season) |>
+  summarise(Total_Germinated = sum(GerminatedAcorns, na.rm = TRUE))
+
+print(germination_summary)
+
+germination_summary |>
+  ggplot(aes(x = Season, y = Total_Germinated, fill = Season)) +
+  geom_col() +
+  labs(title = "Total Germinated Seeds by Season", x = "Season", y = "Total Germinated")
 
 ```
 
-## Soil
+Germinated seeds by block and treatment
+
+```{r}
+germination_by_block_treatment <- germination_data |>
+  group_by(Block, Treatment, Season) |>
+  summarise(Total_Germinated = sum(GerminatedAcorns, na.rm = TRUE))
+
+print(germination_by_block_treatment)
+
+```
+
+Germination rate
+
+```{r}
+# Add Total_Seeds_Planted column 
+germination_data <- germination_data |> mutate(Total_Seeds_Planted = 128)  
+
+# Calculate germination rates
+germination_data <- germination_data |>
+  mutate(Germination_Rate = GerminatedAcorns / Total_Seeds_Planted)
+
+# Summarize germination rates
+germination_rate_summary <- germination_data |>
+  group_by(Block, Treatment, Season) |>
+  summarise(Avg_Germination_Rate = mean(Germination_Rate, na.rm = TRUE))
+
+print(germination_rate_summary)
+
+germination_data |>
+  ggplot(aes(x = Treatment, y = Germination_Rate, fill = Season)) +
+  geom_boxplot() +
+  facet_wrap(~ Block) +
+  labs(title = "Germination Rate by Treatment and Block", x = "Treatment", y = "Germination Rate")
+
+```
+
+Statistical Analysis
+
+#### Effect of Treatment, Block, and Temperature on Germination Rate
+
+```{r}
+
+# Load temperature data
+HOBOData24 <- readRDS("HOBOData24.rds")
+
+# Merge germination data with temperature data
+germination_temp_data <- merge(germination_data, final_data, by = c("Block", "Treatment"))
+
+# Linear model
+germination_model <- lm(Germination_Rate ~ Treatment + Block + Avg_Temperature, data = germination_temp_data)
+
+# Summary of the model
+summary(germination_model)
+
+# Diagnostic plots
+plot(germination_model)
+```
+
+average blocks separate by treatment - effect on treatment
+
+Soil Moisture effect on germination rate
+
+```{r}
+germ_moist_data <- merge(springSM, germination_data, by = c("Treatment", "Block"))
+
+# Merge soil moisture and germination data
+
+# Check the structure of the merged data
+str(germ_moist_data)
+
+# Visualize the relationship between soil moisture and germination rate
+germ_moist_data |>
+  ggplot(aes(x = MeanVWC, y = Germination_Rate, color = Treatment)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(
+    title = "Effect of Soil Moisture on Germination Rate",
+    x = "Mean Volumetric Water Content (Soil Moisture)",
+    y = "Germination Rate"
+  ) +
+  facet_wrap(~ Block) 
+
+# Fit a linear model to test the effect of soil moisture on germination rate
+lm_germination <- lm(Germination_Rate ~ MeanVWC, data = germ_moist_data)
+
+# Summarize the model
+summary(lm_germination)
+
+
+```
+
+## Soil / Bulk Density
 
 do the soils vary
 
@@ -515,7 +666,5 @@ controlling for the variation how do they vary across blocks
 ## Why we planted more Salvia
 
 ```{r}
-system("git init")
-system("git config --global user.name 'kelsey-hauf'")
-system("git config --global user.email 'haufkels@gmail.com'")
+
 ```

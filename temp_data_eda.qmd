@@ -143,7 +143,7 @@ avg_temp <- HOBOData24 |>
 ```{r}
 # Summarize daily temperatures, including standard deviation
 daily_temps <- HOBOData24 |>
-  group_by(Date, Season, Block) |>
+  group_by(Date, Season, Block, Treatment) |>
   summarise(
     min_temp = min(Temp, na.rm = TRUE),
     max_temp = max(Temp, na.rm = TRUE),
@@ -156,14 +156,17 @@ daily_temps <- HOBOData24 |>
 ggplot(daily_temps, aes(x = Date)) +
   geom_point(aes(y = max_temp)) +  # Max Temp
   geom_point(aes(y = min_temp)) +   # Min Temp
-  #facet_wrap(~ Block, ncol = 2)+
+  facet_wrap(~ Treatment, ncol = 2)+
   labs(title = "Daily Maximum and Minimum Temperatures", 
        x = "Date",
        y = "Temperature (°C)") 
 
 # plot for the min max at each block maybe
 
-  
+#movig/sliding moving average window average for 5 days 
+#group by treatment 
+
+
  
 ```
 
@@ -191,6 +194,59 @@ ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = Month)) +
   labs(title = "Average Temperature by Month",
        x = "Month",
        y = "Average Temperature (°C)") 
+
+
+```
+
+```{r}
+
+HOBOData24 <- HOBOData24 |>
+  mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall")))
+
+# Summarize data by Season and Treatment
+data_sum <- HOBOData24 |>
+  group_by(Season, Treatment) |>
+  summarise(
+    mean_temp = mean(Temp, na.rm = TRUE),
+    se_temp = sd(Temp, na.rm = TRUE) / sqrt(n())
+  )
+
+# Plot the summarized data
+data_sum |>
+  ggplot(aes(
+    x = Season,
+    y = mean_temp,
+    color = Treatment
+  )) +
+  geom_line(aes(group = Treatment), position = position_dodge(width = 0.2)) +
+  geom_point(position = position_dodge(width = 0.2), size = 3) +
+  geom_errorbar(aes(
+    ymin = mean_temp - se_temp,
+    ymax = mean_temp + se_temp
+  ),
+  width = 0.1,
+  position = position_dodge(width = 0.2)) +
+  labs(
+    x = "Season",
+    y = "Mean Temperature (°C)",
+    color = "Treatment",
+    title = "Seasonal Mean Temperature by Treatment"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("#1F618D", "#27AE60", "#B7950B", "#E74C3C", "#8E44AD")) +  # Add or adjust colors as needed
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+# Export the plot
+ggsave(
+  "Seasonal_Temperature_Treatment.pdf",
+  plot = last_plot(),
+  device = "pdf",
+  scale = 1,
+  width = 1800,
+  height = 1200,
+  units = "px",
+  dpi = 300
+)
 
 ```
 
