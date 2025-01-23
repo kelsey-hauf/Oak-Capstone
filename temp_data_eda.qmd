@@ -200,6 +200,7 @@ ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = Month)) +
 
 ```{r}
 
+#change the order of the seasons to match daata collection dates 
 HOBOData24 <- HOBOData24 |>
   mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall")))
 
@@ -227,13 +228,13 @@ data_sum |>
   width = 0.1,
   position = position_dodge(width = 0.2)) +
   labs(
-    x = "Season",
+    x = "Season 2024",
     y = "Mean Temperature (°C)",
     color = "Treatment",
     title = "Seasonal Mean Temperature by Treatment"
   ) +
   theme_minimal() +
-  scale_color_manual(values = c("#1F618D", "#27AE60", "#B7950B", "#E74C3C", "#8E44AD")) +  # Add or adjust colors as needed
+  scale_color_manual(values = c("#1F618D", "#27AE60", "#B7950B", "#E74C3C", "#8E44AD")) +  # change colors to match theme
   theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
 
 # Export the plot
