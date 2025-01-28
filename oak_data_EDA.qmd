@@ -836,13 +836,13 @@ do the soils vary
 
 ```
 
-do they vary based on micro habitat -\> treatment
+do they vary based on micro habitat -\> treatment / block / temp
 
 ```{r}
 
 ```
 
-block is a random effect -\> how soils vary based on treatment
+block as a random effect -\> how soils vary based on treatment
 
 ```{r}
 
@@ -854,7 +854,7 @@ block as a fixed effect do soils vary across site -\> notice yes
 
 ```
 
-controlling for the variation how do they vary across blocks
+controlling for the variation -\> how do they vary across blocks
 
 ```{r}
 
@@ -862,14 +862,61 @@ controlling for the variation how do they vary across blocks
 
 \
 
-## Natural Recruitment EDA
+## Natural Recruitment EDA ?
 
 ```{r}
 
 ```
 
-## Why we planted more Salvia
+## Why we planted more Salvia oop 
+
+canceled lol
 
 ```{r}
 
 ```
+
+# Predictive Model
+
+```{r}
+
+
+# Check the levels of each variable
+levels(final_data$LifeStage)
+levels(final_data$Treatment)
+levels(final_data$Block)
+
+final_data <- final_data |>
+  mutate(
+    LifeStage = as.factor(LifeStage),
+    Treatment = as.factor(Treatment),
+    Block = as.factor(Block)
+  )
+
+# Identify rows with NA levels in categorical variables
+invalid_rows <- final_data |>
+  filter(is.na(LifeStage) | is.na(Treatment) | is.na(Block))
+
+# Remove invalid rows
+final_data <- final_data %>%
+  filter(!is.na(LifeStage) & !is.na(Treatment) & !is.na(Block))
+
+# Combine the  datasets
+seedling_data <- bind_rows(fall24, spring24, summer24)
+
+
+# Remove LifeStage from final_data before join
+final_data <- final_data |>
+  select(-LifeStage) |>
+  left_join(seedling_data |> select(Tag, LifeStage), by = "Tag")
+
+# Example: Predicting Growth Rate
+model <- lm(Growth_Rate ~ Treatment + Block + LifeStage + Avg_Temperature, data = final_data)
+summary(model)
+```
+
+acorns vs seedlings across microclimate condtions
+
+tag numbers that need replacing
+
+subset data for replaceiment
