@@ -90,6 +90,100 @@ fallSM <- read_csv('2024 Fall Soil Moisture ORPOY - Sheet1.csv')
 
 ```
 
+##   Number of Living Seedlings by Treatment and Block
+
+```{r}
+# Filter for living seedlings based on parameters
+living_seedlings <- fall24 |>
+  filter(LifeStage == "Seedling", Height > 1, Leaves > 1)
+
+# Count living seedlings per block or overall
+seedling_counts <- living_seedlings |>
+  count(Block)
+
+# Create a bar graph showing living seedlings per block
+ggplot(seedling_counts, aes(x = Block, y = n)) +
+  geom_bar(stat = "identity", fill = "forestgreen") +
+  labs(
+    title = "Number of Living Seedlings in Fall 2024",
+    x = "Block",
+    y = "Number of Living Seedlings"
+  ) +
+  theme_minimal()
+
+# Total tally of seedlings
+total_seedlings <- fall24 |>
+  filter(LifeStage == "Seedling") |>
+  nrow()
+
+# Tally of alive seedlings
+alive_seedlings <- fall24 |>
+  filter(LifeStage == "Seedling", Height > 1, Leaves > 1) |>
+  nrow()
+
+# Print the results
+cat("Total number of seedlings:", total_seedlings, "\n")
+cat("Number of alive seedlings:", alive_seedlings, "\n")
+
+# Count living seedlings by block and treatment
+living_seedlings_by_treatment <- fall24 |>
+  filter(LifeStage == "Seedling", Height > 1, Leaves > 1) |>
+  count(Block, Treatment)
+
+# Create a faceted bar graph
+ggplot(living_seedlings_by_treatment, aes(x = Treatment, y = n, fill = Treatment)) +
+  geom_bar(stat = "identity", position = "dodge") +
+  facet_wrap(~ Block) +
+  labs(
+    title = "Number of Living Seedlings by Treatment and Block",
+    x = "Treatment",
+    y = "Number of Living Seedlings",
+    fill = "Treatment",
+    caption = paste("Total seedlings that survived across all blocks:", alive_seedlings,"\n",
+      "Out of:", total_seedlings)
+   
+  ) #+
+  #theme_minimal() #+
+ # theme(
+ #   strip.text = element_text(size = 12, face = "bold"),
+ #   axis.text.x = element_text(angle = 45, hjust = 1)
+  #)
+
+
+
+#change block number to a char to show block number 
+```
+
+## Number of germinated acorns by block and treatment
+
+```{r}
+# Summarizing the number of germinated acorns by block and treatment
+fall24_summary <- fall24 %>%
+  group_by(Block, Treatment) %>%
+  summarise(Total_Germinated = sum(GerminatedAcorns, na.rm = TRUE))
+
+# Calculate total germinated acorns across all blocks
+total_germinated <- sum(fall24_summary$Total_Germinated, na.rm = TRUE)
+
+# Get the maximum value for y-axis scaling
+max_value <- max(fall24_summary$Total_Germinated, na.rm = TRUE)
+
+# Creating the faceted plot with a total count in the caption
+ggplot(fall24_summary, aes(x = Treatment, y = Total_Germinated, fill = Treatment)) +
+  geom_bar(stat = "identity") +
+  facet_grid(~Block) +  # Facet by Block
+  labs(
+    title = "Number of Germinated Acorns by Treatment (Faceted by Block)",
+    x = "Treatment",
+    y = "Total Germinated Acorns",
+    fill = "Treatment",
+    caption = paste("Total germinated acorns across all blocks:", total_germinated)  # Add text under legend
+  ) +
+  scale_y_continuous(breaks = seq(1, max_value, by = 1)) +  # Set y-axis breaks
+  #theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
 ### Create a data set that has the heights across seasons to compare them
 
 ```{r}
