@@ -133,7 +133,7 @@ avSummer24Day <- HOBOData24 |>
   summarise(avg_temp = mean(Temp, na.rm = TRUE))
 
 avg_temp <- HOBOData24 |>
-  group_by(Date, Season, Block) |>
+  group_by(Date, Season, Block, Month) |>
   summarise(avg_temp = mean(Temp, na.rm = TRUE))
 
 ```
@@ -206,7 +206,7 @@ HOBOData24 <- HOBOData24 |>
 
 # Summarize data by Season and Treatment
 data_sum <- HOBOData24 |>
-  group_by(Season, Treatment) |>
+  group_by(Month, Treatment) |>
   summarise(
     mean_temp = mean(Temp, na.rm = TRUE),
     se_temp = sd(Temp, na.rm = TRUE) / sqrt(n())
@@ -215,7 +215,7 @@ data_sum <- HOBOData24 |>
 # Plot the summarized data
 data_sum |>
   ggplot(aes(
-    x = Season,
+    x = Month,
     y = mean_temp,
     color = Treatment
   )) +

@@ -88,16 +88,36 @@ fall24 <- fall24 |>
 #Fall 2024 soil moisture data
 fallSM <- read_csv('2024 Fall Soil Moisture ORPOY - Sheet1.csv')
 
+# seedling height, # of leaves, and acorn germination for Winter 2025
+winter25 <- read_csv('2025 Winter Seedling & Acorn Height and Survival ORPOY - Sheet1.csv')
+
+#making the cloumn names match the preexisting data sets 
+winter25 <- winter25 |>
+  select(-`Data Enterer Initials`, -`Page Number`, -`Date`, -`Data Entered`, -`QAQC`, -`Notes`) |>
+  rename('Block' = 'Block Number') |>
+  rename('Tag' = 'Tag Number') |>
+  rename('LifeStage' = 'Acorn or seedling?') |>
+  rename('Height' = 'Seedling Height (cm)') |>
+  rename('GerminatedAcorns' = 'Number of Acorns That Germinated') |>
+  rename('Leaves' = '# Leaves on Seedling') |>
+  rename('Salvia' = 'Is Salvia apiana alive') 
+
+#Winter 2025 soil moisture data
+winter25SM <- read_csv('2025 Winter Soil Moisture ORPOY - Sheet1.csv')
+
+
 ```
 
-##   Number of Living Seedlings by Treatment and Block
+## Seedling Survival
+
+## Number of Living Seedlings by Treatment and Block
 
 ```{r}
 # Filter for living seedlings based on parameters
-living_seedlings <- fall24 |>
+living_seedlings <- winter25 |>
   filter(LifeStage == "Seedling", Height > 1, Leaves > 1)
 
-# Count living seedlings per block or overall
+# Count living seedlings per block 
 seedling_counts <- living_seedlings |>
   count(Block)
 
@@ -108,25 +128,24 @@ ggplot(seedling_counts, aes(x = Block, y = n)) +
     title = "Number of Living Seedlings in Fall 2024",
     x = "Block",
     y = "Number of Living Seedlings"
-  ) +
-  theme_minimal()
+  ) 
 
 # Total tally of seedlings
-total_seedlings <- fall24 |>
+total_seedlings <- winter25 |>
   filter(LifeStage == "Seedling") |>
   nrow()
 
 # Tally of alive seedlings
-alive_seedlings <- fall24 |>
+alive_seedlings <- winter25 |>
   filter(LifeStage == "Seedling", Height > 1, Leaves > 1) |>
   nrow()
 
 # Print the results
-cat("Total number of seedlings:", total_seedlings, "\n")
+cat("Total number of seedlings: 96", "\n")
 cat("Number of alive seedlings:", alive_seedlings, "\n")
 
 # Count living seedlings by block and treatment
-living_seedlings_by_treatment <- fall24 |>
+living_seedlings_by_treatment <- winter25 |>
   filter(LifeStage == "Seedling", Height > 1, Leaves > 1) |>
   count(Block, Treatment)
 
@@ -139,8 +158,8 @@ ggplot(living_seedlings_by_treatment, aes(x = Treatment, y = n, fill = Treatment
     x = "Treatment",
     y = "Number of Living Seedlings",
     fill = "Treatment",
-    caption = paste("Total seedlings that survived across all blocks:", alive_seedlings,"\n",
-      "Out of:", total_seedlings)
+    caption = paste("Total seedlings that survived across all blocks:", alive_seedlings, "\n",
+      "Out of: 96")
    
   ) #+
   #theme_minimal() #+
@@ -158,30 +177,31 @@ ggplot(living_seedlings_by_treatment, aes(x = Treatment, y = n, fill = Treatment
 
 ```{r}
 # Summarizing the number of germinated acorns by block and treatment
-fall24_summary <- fall24 %>%
+winter25_summary <- winter25 %>%
   group_by(Block, Treatment) %>%
   summarise(Total_Germinated = sum(GerminatedAcorns, na.rm = TRUE))
 
 # Calculate total germinated acorns across all blocks
-total_germinated <- sum(fall24_summary$Total_Germinated, na.rm = TRUE)
+total_germinated <- sum(winter25_summary$Total_Germinated, na.rm = TRUE)
 
 # Get the maximum value for y-axis scaling
-max_value <- max(fall24_summary$Total_Germinated, na.rm = TRUE)
+max_value <- max(winter25_summary$Total_Germinated, na.rm = TRUE)
 
 # Creating the faceted plot with a total count in the caption
-ggplot(fall24_summary, aes(x = Treatment, y = Total_Germinated, fill = Treatment)) +
+ggplot(winter25_summary, aes(x = Treatment, y = Total_Germinated, fill = Treatment)) +
   geom_bar(stat = "identity") +
   facet_grid(~Block) +  # Facet by Block
   labs(
-    title = "Number of Germinated Acorns by Treatment (Faceted by Block)",
+    title = "Number of Germinated Acorns by Treatment and Block",
     x = "Treatment",
     y = "Total Germinated Acorns",
     fill = "Treatment",
-    caption = paste("Total germinated acorns across all blocks:", total_germinated)  # Add text under legend
+    caption = paste("Total germinated acorns across all blocks:", total_germinated, "\n",
+      "Out of: 288")  # Add text under legend
   ) +
   scale_y_continuous(breaks = seq(1, max_value, by = 1)) +  # Set y-axis breaks
   #theme_minimal() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+ theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
 ### Create a data set that has the heights across seasons to compare them
@@ -218,16 +238,20 @@ fall_heights <- fall24 |>
   mutate(Season = 'Fall24') |>
   mutate(Lifestage = 'Seedling')
 
-
+winter25_heights <- winter25 |>
+filter(LifeStage == 'Seedling') |> 
+  select(Tag, Treatment, Height, Block) |> 
+  mutate(Season = 'Winter25') |>
+  mutate(Lifestage = 'Seedling')
 
 # Combine the  datasets
-seedling_height_data <- bind_rows(initial_heights, spring_heights, summer_heights, fall_heights)
+seedling_height_data <- bind_rows(initial_heights, spring_heights, summer_heights, fall_heights, winter25_heights)
 
 # View the combined data
 print(seedling_height_data)
 
 seedling_height_data <- seedling_height_data |>
-  mutate(Season = factor(Season, levels = c("Initial24", "Spring24", "Summer24", "Fall24")))
+  mutate(Season = factor(Season, levels = c("Initial24", "Spring24", "Summer24", "Fall24", "Winter25")))
 
 
 ```
@@ -291,11 +315,12 @@ seedling_height_wide <- seedling_height_wide |>
     Growth_Initial_to_Spring = (Spring24 - Initial24) / Initial24,
     Growth_Spring_to_Summer = (Summer24 - Spring24) / Spring24,
     Growth_Summer_to_Fall = (Fall24 - Summer24) / Summer24,
+    Growth_Fall_to_Winter = (Winter25 - Fall24) / Fall24 
   )
 
 # Pivot longer to prepare for visualization
 growth_rate_data <- seedling_height_wide |>
-  select(Tag, Treatment, Block, Growth_Initial_to_Spring, Growth_Spring_to_Summer, Growth_Summer_to_Fall) |>
+  select(Tag, Treatment, Block, Growth_Initial_to_Spring, Growth_Spring_to_Summer, Growth_Summer_to_Fall, Growth_Fall_to_Winter) |>
   pivot_longer(
     cols = starts_with("Growth"),
     names_to = "Growth_Period",
@@ -458,6 +483,9 @@ springSM$Block <- as.factor(springSM$Block)
 fallSM$Treatment <- as.factor(fallSM$Treatment)
 fallSM$Block <- as.factor(fallSM$Block)
 
+winter25SM$Treatment <- as.factor(winter25SM$Treatment) 
+winter25SM$Block <- as.factor(winter25SM$Block)
+
 #add a season column 
 
 springSM <- springSM |>
@@ -466,7 +494,8 @@ springSM <- springSM |>
 fallSM <- fallSM |>
   mutate(Season = "Fall 2024")
 
-
+winter25SM <- winter25SM |>
+  mutate(Season = "Winter 2025")
 
 # Calculate the mean soil moisture (MeanVWC) as before
 springSM <- springSM |>
@@ -476,8 +505,14 @@ springSM <- springSM |>
 
 fallSM <- fallSM |>
   mutate(across(c(VWC1, VWC2, VWC3), ~ as.numeric(.))) |>  # Convert to numeric
-  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .))) |>  # Replace NA with column mean
+  #mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .))) |>  # Replace NA with column mean
   mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3)  # Calculate MeanVWC
+
+winter25SM <- winter25SM |>
+  mutate(across(c(VWC1, VWC2, VWC3), ~ as.numeric(.))) |>  # Convert to numeric
+  #mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .))) |>  # Replace NA with column mean
+  mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3)  # Calculate MeanVWC
+
 
 # Ensure growth data also has 'Treatment' and 'Block' to enable merging
 growth_rate_data$Treatment <- as.factor(growth_rate_data$Treatment)
@@ -487,23 +522,24 @@ growth_rate_data$Block <- as.factor(growth_rate_data$Block)
 
 # Merge soil moisture and growth datasets by 'Treatment' and 'Block'
 combinedSM_data <- merge(springSM, fallSM, by = c("Treatment", "Block"))
+combinedSM_data <- merge(combinedSM_data, winter25SM, by = c("Treatment", "Block"))
 combinedSM_data <- merge(combinedSM_data, growth_rate_data, by = c("Treatment", "Block"))
 
 # Quick look at combined dataset
 head(combinedSM_data)
 
 # Scatter plot of MeanVWC vs Growth Rate (Height or Leaves growth)
-ggplot(combinedSM_data, aes(x = MeanVWC.y, y = Growth_Rate)) +
+ggplot(combinedSM_data, aes(x = MeanVWC, y = Growth_Rate)) +
   geom_point(aes(color = Treatment), size = 3) +
   geom_smooth(method = "lm", se = TRUE, color = "black") +
   labs(
-    x = "Mean Spring 2024 Volumetric Water Content",
+    x = "Mean Volumetric Water Content",
     y = "Growth Rate (Change in Height or Leaves)",
     title = "Effect of Soil Moisture on Growth Rate"
   ) 
 
 # Linear regression to assess the relationship
-model <- lm(Growth_Rate ~ MeanVWC.y, data = combinedSM_data)
+model <- lm(Growth_Rate ~ MeanVWC, data = combinedSM_data)
 summary(model)
 
 # there is a statistically significant relationship between growth rate and VWC
@@ -548,30 +584,38 @@ There is a relationship which is great!
 
 # Filter the spring24 leaf count data
 spring_leaves <- spring24 |> 
-  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR', Height > 1, Leaves > 1) |> 
   select(Tag, Treatment, Leaves, Block) |> 
-  mutate(Season = 'Spring') |>
+  mutate(Season = 'Spring24') |>
   mutate(Lifestage = 'Seedling')
 
 
 # Filter the summer24 leaf count data
 summer_leaves <- summer24 |> 
-  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR', Height > 1, Leaves > 1) |> 
   select(Tag, Treatment, Leaves, Block) |> 
-  mutate(Season = 'Summer') |>
+  mutate(Season = 'Summer24') |>
   mutate(Lifestage = 'Seedling')
 
 
 # Filter the fall24 leaf count data
 fall_leaves <- fall24 |> 
-  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR', Height > 1, Leaves > 1) |> 
   select(Tag, Treatment, Leaves, Block) |> 
-  mutate(Season = 'Fall') |>
+  mutate(Season = 'Fall24') |>
+  mutate(Lifestage = 'Seedling')
+
+# Filter the winter25 leaf count data
+winter_leaves <- winter25 |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR', Height > 1, Leaves > 1) |> 
+  select(Tag, Treatment, Leaves, Block) |> 
+  mutate(Season = 'Winter25') |>
   mutate(Lifestage = 'Seedling')
 
 
+
 # Combine the  datasets
-seedling_leaf_data <- bind_rows(spring_leaves, summer_leaves, fall_leaves)
+seedling_leaf_data <- bind_rows(spring_leaves, summer_leaves, fall_leaves, winter_leaves)
 
 # View the combined data
 print(seedling_leaf_data)
@@ -585,7 +629,7 @@ Leaf count across seasons
 ```{r}
 
 seedling_leaf_data <- seedling_leaf_data |>
-  mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall")))
+  mutate(Season = factor(Season, levels = c("Spring24", "Summer24", "Fall24", "Winter25")))
 
 
 seedling_leaf_data |>
@@ -605,7 +649,8 @@ ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Trea
   geom_point() +
   facet_wrap(~ Block) +  # Or replace with Block or another grouping variable
   labs(x = "Season", y = "Leaf Count", title = "Change in Leaf Count Across Seasons by Treatment") +
-  theme_minimal()
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ```
@@ -616,7 +661,7 @@ ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Trea
 
 #spring 2024 soil moisture 
 
-#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
+#If Treatment was previously a character or numeric type, this line changes it to a factor, 
 
 springSM$Treatment <- as.factor(springSM$Treatment)
 springSM$Block <- as.factor(springSM$Block)
@@ -647,9 +692,12 @@ MeanVWC <- springSM |>
 
 
 # Create the bar plot showing mean vwc in each treatment 
-ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
-  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
-  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content")   # Add labels
+
+
+ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC, fill = Block)) +
+  #geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  geom_col(position = position_dodge())+
+  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content") 
   
 # Create box and whisker graph showing mean vwc in each treatment 
 plot(springSM$Treatment, springSM$MeanVWC, 
@@ -661,10 +709,10 @@ plot(springSM$Treatment, springSM$MeanVWC,
 #lets do the same for the blocks 
 
 # Create the bar plot showing mean vwc in each block 
-ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
-  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
-  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content")   # Add labels
-  
+ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom = "errorbar", position = "dodge")+
+  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content")    
 
 #plot(springSM$Block, springSM$MeanVWC, 
      #xlab="Experimental Block", 
@@ -673,8 +721,7 @@ ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
 
 #fall 2024 soil moisture 
 
-#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
-
+#If Treatment was previously a character or numeric type, this line changes it to a factor, 
 fallSM$Treatment <- as.factor(fallSM$Treatment)
 fallSM$Block <- as.factor(fallSM$Block)
 
@@ -685,29 +732,36 @@ plot(fallSM$Treatment, fallSM$VWC1,
      ylab="Fall 2024 Volumetric Water Content")
 
 
-
 #let's make a new variable, the average of VWC
 
 # Replace NAs with the mean of each VWC column
 fallSM <- fallSM |>
-  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .))) |>
+  mutate(VWC2 = as.numeric(VWC2), VWC3 = as.numeric(VWC3))
 
 #-------------------------------------------------------------------------------
 
 # Calculate MeanVWC
 MeanVWC <- fallSM |>
-  mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3) |>
+ # mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3) |>
+  mutate(MeanVWC = rowMeans(select(fallSM, VWC1, VWC2, VWC3), na.rm = TRUE)) |>
   select(MeanVWC, Treatment, Block)
-
 
 #------------------------------------------------------------------------------
 
 
-# Create the bar plot showing mean vwc in each treatment 
+# Create the bar plot showing mean vwc in each treatment and each block
+ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC, fill = Block)) +
+  #geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  geom_col(position = position_dodge())+
+  labs(x = "Planting Location", y = "Mean Fall 2024 Volumetric Water Content")  # Add labels
+
+#Finding the Averages across blocks
 ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
-  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
-  labs(x = "Planting Location", y = "Mean Fall 2024 Volumetric Water Content")   # Add labels
-  
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom = "errorbar", position = "dodge")+
+  labs(x = "Planting Location", y = "Mean Fall 2024 Volumetric Water Content")    
+
 # Create box and whisker graph showing mean vwc in each treatment 
 plot(fallSM$Treatment, fallSM$MeanVWC, 
      xlab = "Planting Location", 
@@ -719,12 +773,12 @@ plot(fallSM$Treatment, fallSM$MeanVWC,
 
 # Create the bar plot showing mean vwc in each block 
 ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
-  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  geom_col(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
   labs(x = "Planting Location", y = "Mean Fall 2024 Volumetric Water Content")   # Add labels
   
 ```
 
-### Mean VWC by treatment and season 
+### Mean VWC by treatment and season
 
 ```{r}
 
@@ -735,12 +789,18 @@ springSM <- springSM |>
 fallSM <- fallSM |>
   mutate(Season = "Fall 2024")
 
+winter25SM <- winter25SM |>
+  mutate(Season = "Winter 2024")
+
 fallSM <- fallSM |>
   mutate(across(c(PER1, PER2, PER3), ~ as.numeric(.))) #|>  # Convert to numeric
  # mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))   # Replace NA with column mean
 
+winter25SM <- winter25SM |>
+  mutate(across(c(PER1, PER2, PER3), ~ as.numeric(.)))
+
 # Combine the datasets
-combinedSM_data <- bind_rows(springSM, fallSM)
+combinedSM_data <- bind_rows(springSM, fallSM, winter25SM)
 
 # Calculate MeanVWC for the combined dataset
 combinedSM_data <- combinedSM_data |>
@@ -749,7 +809,9 @@ combinedSM_data <- combinedSM_data |>
 
 
 ggplot(data = combinedSM_data, aes(x = Treatment, y = MeanVWC, fill = Season)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
+ # geom_col(stat = "identity", position = position_dodge()) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom= "errorbar", position = "dodge")+
   labs(x = "Planting Location", y = "Mean Volumetric Water Content", fill = "Season") +
   theme_minimal()
 
@@ -763,16 +825,20 @@ combinedSMlog <- combinedSM_data |>
   mutate(MeanVWC_Log = (log_VWC1 + log_VWC2 + log_VWC3) / 3)
 
 ggplot(data = combinedSMlog, aes(x = Treatment, y = MeanVWC_Log, fill = Season)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
+ # geom_col(stat = "identity", position = position_dodge()) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom= "errorbar", position = "dodge")+
   labs(x = "Planting Location", y = "Log-Transformed Mean Volumetric Water Content", fill = "Season") +
   theme_minimal()
 ```
 
-### Mean VWC by Block and season 
+### Mean VWC by Block and season
 
 ```{r}
 ggplot(data = combinedSM_data, aes(x = Block, y = MeanVWC, fill = Season)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
+ # geom_col(stat = "identity", position = position_dodge()) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom= "errorbar", position = "dodge")+
   labs(x = "Experimental Block", y = "Mean Volumetric Water Content", fill = "Season") +
   theme_minimal()
 
@@ -780,7 +846,9 @@ ggplot(data = combinedSM_data, aes(x = Block, y = MeanVWC, fill = Season)) +
 #log SM graph
 
 ggplot(data = combinedSMlog, aes(x = Block, y = MeanVWC_Log, fill = Season)) +
-  geom_bar(stat = "identity", position = position_dodge()) +
+ # geom_col(stat = "identity", position = position_dodge()) +
+  stat_summary(fun.y = mean, geom = "bar", position = "dodge")+
+  stat_summary(fun.data = mean_se, geom= "errorbar", position = "dodge")+
   labs(x = "Experimental Block", y = "Log-Transformed Mean Volumetric Water Content", fill = "Season") +
   theme_minimal()
 ```
@@ -808,14 +876,15 @@ total germinated seeds in each season
 ```{r}
 # Combine germination data for all seasons
 germination_data <- bind_rows(
-  spring24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Spring"),
-  summer24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Summer"),
-  fall24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Fall")
+  spring24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Spring 24"),
+  summer24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Summer 24"),
+  fall24 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Fall 24"),
+  winter25 |> select(Block, Treatment, GerminatedAcorns) |> mutate(Season = "Winter 25")
 )
 
 #change the order of the seasons to match daata collection dates 
 germination_data <- germination_data |>
-  mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall")))
+  mutate(Season = factor(Season, levels = c("Spring 24", "Summer 24", "Fall 24", "Winter 25")))
 
 # Summarize total germinated seeds per season
 germination_summary <- germination_data |>
@@ -827,8 +896,10 @@ print(germination_summary)
 germination_summary |>
   ggplot(aes(x = Season, y = Total_Germinated, fill = Season)) +
   geom_col() +
-  labs(title = "Total Germinated Seeds by Season", x = "Season", y = "Total Germinated")
-
+  geom_text(aes(label = Total_Germinated), vjust = -0.5) +
+  labs(title = "Total Germinated Seeds by Season", 
+       x = "Season", 
+       y = "Total Germinated")
 ```
 
 ### Germinated seeds by block and treatment
@@ -962,7 +1033,7 @@ controlling for the variation -\> how do they vary across blocks
 
 ```
 
-## Why we planted more Salvia oop 
+## Why we planted more Salvia oop
 
 canceled lol
 
@@ -1011,6 +1082,19 @@ summary(model)
 
 acorns vs seedlings across microclimate condtions
 
-tag numbers that need replacing
+### tag numbers that need replacing
 
-subset data for replaceiment
+```{r}
+#combine the data 
+tagdata <- winter25
+
+tagdata <- tagdata |> 
+filter(LifeStage == "Seedling", Leaves < 1)
+
+print(tagdata |> select(Tag, Block, Treatment))
+
+
+
+```
+
+subset data for replacement seedlings
