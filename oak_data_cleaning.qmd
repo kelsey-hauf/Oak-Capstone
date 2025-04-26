@@ -1,0 +1,221 @@
+---
+title: "oak_data_cleaning"
+author: "Kelsey Hauf"
+format: html
+editor: visual
+---
+
+## Load Libraries + Data
+
+```{r}
+#load libaraies
+library(tidyverse)
+library(dplyr)
+library(lattice)
+library(nlme)
+library(car)
+library(ggplot2)
+```
+
+## cleaning up oak data
+
+```{r}
+
+#size of the seedlings when planted
+initial_size <- read_csv('Oak_Seedlings_Initial_size.csv')
+
+initial_size <- initial_size |>
+  select(-`Page`)
+
+#seedling height, # of leaves, for winter + spring
+seedling_data <- read_csv('Oak_Seedlings_Size.csv')
+
+#spring acorn germination 
+spring24germ <- read_csv('Spring24Germination.csv')
+
+#spring soil moisture data
+springSM <- read_csv('SpringSoilMoistureORPOY.csv')
+
+seedling_acorn_data_spring <- read_csv('2024 Spring Seedling & Acorn Height and Survival ORPOY - Spring Data.csv')
+
+#making the cloumn names match the preexisting data sets 
+seedling_acorn_data_spring <- seedling_acorn_data_spring |>
+  select(-`Data Enterer Initials`, -`Notes`, -`Page Number`, -`Date`) |>
+  rename('Block' = 'Block Number') |>
+  rename('Tag' = 'Tag Number') |>
+  rename('LifeStage' = 'Acorn or seedling?') |>
+  rename('Height' = 'Seedling Height') |>
+  rename('GerminatedAcorns' = 'Number of Acorns That Germinated') |>
+  rename('Leaves' = '# Leaves on Seedling') |>
+  rename('Salvia' = 'Is Salvia apiana alive') 
+
+
+
+
+```
+
+## Create a data set that has the heights across seasons to compare them
+
+```{r}
+
+# Filter the initial seedling heights data
+initial_heights <- initial_size |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  select(Tag, Treatment, Height, Block) |>  
+  mutate(Season = 'Initial') |>
+  mutate(Lifestage = 'Seedling')
+
+# Filter the spring seedling heights data
+spring_heights <- seedling_acorn_data_spring |> 
+  filter(LifeStage == 'Seedling') |> 
+  select(Tag, Treatment, Height, Block) |> 
+  mutate(Season = 'Spring') |>
+  mutate(Lifestage = 'Seedling')
+
+
+# Combine the two datasets
+seedling_height_data <- bind_rows(initial_heights, spring_heights)
+
+# View the combined data
+#print(seedling_height_data)
+  
+
+```
+
+# Visualizations - Heights
+
+Create a graph that compares the overall heights
+
+```{r}
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Season , y = Height, fill = Season) +
+  geom_col(position = position_dodge())
+
+```
+
+Create a graph that compares the change in heights by treatment
+
+```{r}
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Treatment , y = Height, fill = Season) +
+  labs(x = "Treatment", y = "Height", fill = "Season") +  # Add labels
+  geom_col(position = position_dodge())
+
+
+```
+
+Create a graph that compares the change in heights by block
+
+```{r}
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Block , y = Height, fill = Season) +
+  labs(x = "Block", y = "Height", fill = "Season") +  # Add labels
+  geom_col(position = position_dodge())
+```
+
+## Soil Moisture
+
+```{r}
+
+#spring 2024 soil moisture 
+
+#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
+
+springSM$Treatment <- as.factor(springSM$Treatment)
+springSM$Block <- as.factor(springSM$Block)
+
+
+#plot the data:
+plot(springSM$Treatment, springSM$VWC1, 
+     xlab = "Planting Location", 
+     ylab="Volumetric Water Content")
+
+
+
+#let's make a new variable, the average of VWC
+
+# Replace NAs with the mean of each VWC column
+springSM <- springSM |>
+  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+#-------------------------------------------------------------------------------
+
+# Calculate MeanVWC
+MeanVWC <- springSM |>
+  mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3) |>
+  select(MeanVWC, Treatment, Block)
+
+
+#------------------------------------------------------------------------------
+
+
+# Create the bar plot showing mean vwc in each treatment 
+ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  labs(x = "Planting Location", y = "Mean Volumetric Water Content")   # Add labels
+  
+# Create box and whisker graph showing mean vwc in each treatment 
+plot(springSM$Treatment, springSM$MeanVWC, 
+     xlab = "Planting Location", 
+     ylab="Volumetric Water Content")
+
+#----------------------------------------------------------------------------
+
+#lets do the same for the blocks 
+
+# Create the bar plot showing mean vwc in each block 
+ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  labs(x = "Planting Location", y = "Mean Volumetric Water Content")   # Add labels
+  
+
+plot(springSM$Block, springSM$MeanVWC, 
+     xlab="Experimental Block", 
+     ylab="Volumetric Water Content")
+
+
+
+str(springSM)
+histogram(springSM$MeanVWC)
+
+
+
+soil.aov <- aov(MeanVWC ~ Treatment, data=springSM)
+summary(soil.aov)
+
+soil.aov2 <- glm(MeanVWC ~ Treatment + Block, data=springSM)
+Anova(soil.aov2)
+
+#run a mixed model anova to determine whether soil moisture varied 
+#depending on plot type while controlling for random Block effects
+
+#soil.aov3 <- lme(MeanVWC~Treatment, random = ~1|Block, data=springSM)
+#print(summary(soil.aov3))
+#anova(soil.aov3)
+```
+
+## Germination
+
+july 1st - june 30th
+
+average blocks separate by treatment - effect on treatment
+
+NR compare
+
+Soil
+
+do the soils vary
+
+do they vary based on micro habitat -\> treatment
+
+block is a random effect -\> how soils vary based on treatment
+
+block as a fixed do soils vary across site -\> notice yes
+
+controlling for the variation how do they vary across blocks\

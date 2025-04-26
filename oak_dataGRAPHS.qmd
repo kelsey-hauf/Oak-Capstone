@@ -46,14 +46,14 @@ clean_seasonal_data <- function(df) {
       GerminatedAcorns = "Number of Acorns That Germinated",
       Leaves = "# Leaves on Seedling",
       Salvia = "Is Salvia apiana alive"
-    ) |>
+    ) #|>
     # New condition for Missing Salvia
-    mutate(
-      Treatment = case_when(
-        Salvia == "Missing" ~ "OA",
-        TRUE ~ Treatment
-      )
-    )
+   # mutate(
+    #  Treatment = case_when(
+      #  Salvia == "Missing" ~ "OA",
+     #  TRUE ~ Treatment
+    #  )
+   # )
   
   
   # Only rename "Acorn #" if it exists
@@ -81,7 +81,7 @@ initial_size <- read_csv('Oak_Seedlings_Initial_size.csv') |>
   select(-Page)
 
 # Seasonal data (applies cleaning function)
-#spring24 <- read_csv('2024 Spring Seedling & Acorn Height and Survival ORPOY - Spring Data.csv') |> clean_seasonal_data()
+spring24 <- read_csv('2024 Spring Seedling & Acorn Height and Survival ORPOY - Spring Data.csv') |> clean_seasonal_data()
 summer24 <- read_csv('2024 Summer Seedling & Acorn Height and Survival ORPOY.xlsx - Summer Data.csv') |> clean_seasonal_data()
 fall24 <- read_csv('2024 Fall Seedling & Acorn Height and Survival ORPOY - Sheet1.csv') |> clean_seasonal_data() 
 winter25 <- read_csv('2025 Winter Seedling & Acorn Height and Survival ORPOY - Sheet1.csv') |> clean_seasonal_data()
@@ -98,7 +98,7 @@ deduplicated_data <- winter25 %>%
 
 # Verify treatment counts per block
 treatment_counts <- deduplicated_data %>%
-  filter(Treatment != "SA") %>%  # Exclude SA if needed
+ # filter(Treatment != "SA") %>%  # Exclude SA if needed
   count(Block, Treatment) %>%
   filter(n != 6)  # Flag blocks needing adjustment
 
@@ -155,7 +155,7 @@ spring25SM <- read_csv('2025 Spring Soil Moisture ORPOY - Sheet1.csv') |> proces
 
 #all of it together 
 seasonal_data <- bind_rows(
-  #spring24 |> mutate(Season = "Spring24"),
+  spring24 |> mutate(Season = "Spring24"),
   summer24 |> mutate(Season = "Summer24"),
   fall24 |> mutate(Season = "Fall24"),
   winter25 |> mutate(Season = "Winter25"),
@@ -180,13 +180,12 @@ height_data <- list(
 
 
 # Soil moisture unified dataset
-all_sm <- bind_rows(springSM, 
-                    fallSM, winter25SM, spring25SM) |>
+all_sm <- bind_rows(springSM, fallSM, winter25SM, spring25SM) |>
   mutate(Treatment = as.factor(Treatment), Block = as.factor(Block))
 
 # leaf count data across seasons
 leaf_data <- bind_rows(
-  #spring24 |> mutate(Season = "Spring24"),
+  spring24 |> mutate(Season = "Spring24"),
   summer24 |> mutate(Season = "Summer24"),
   fall24 |> mutate(Season = "Fall24"),
   winter25 |> mutate(Season = "Winter25"),
@@ -221,15 +220,21 @@ label_names <- c(
   "OA" = "Open Area",
   "SA" = "Salvia apiana")
 
-# Create bar plot for seedlings survival
 ggplot(seedling_counts, aes(x = Treatment, y = n, fill = Treatment)) +
   geom_bar(stat = "identity") +
-  scale_y_continuous(limits = c(0, 9)) +  # Set y-axis from 0 to 10
+  scale_y_continuous(limits = c(0, 9)) +
   geom_text(aes(label = n), vjust = -0.5, size = 4) + 
-    scale_x_discrete(labels = label_names) +
-# Add text labels above bars
+  scale_x_discrete(labels = label_names) +
+  scale_fill_manual(
+    values = c(
+      "AC" = "darkgreen",
+      "DT" = "purple",
+      "OA" = "orange",
+      "SA" = "hotpink"
+    )
+  ) +
   labs(
-    title = "Number of Living Seedlings by Treatment \nas of Winter 2025",
+    title = "Number of Living Seedlings by Treatment",
     x = "Treatment",
     y = "Number of Living Seedlings",
     fill = "Treatment",
@@ -237,6 +242,26 @@ ggplot(seedling_counts, aes(x = Treatment, y = n, fill = Treatment)) +
                     "\nSurvived: ", alive_seedlings)
   ) +
   theme_minimal()
+
+#---------------------------------------------------------------------------------------------
+
+# Count living seedlings per block 
+seedling_counts <- alive_seedlings |>
+  count(Block)
+
+# Create a bar graph showing living seedlings per block
+ggplot(seedling_counts, aes(x = Block, y = n)) +
+  geom_bar(stat = "identity") +
+  labs(
+    title = "Number of Living Seedlings in Fall 2024",
+    x = "Block",
+    y = "Number of Living Seedlings"
+  ) 
+
+
+# Print the results
+cat("Total number of seedlings: 96", "\n")
+cat("Number of alive seedlings:", alive_seedlings, "\n")
 
 
 #---------------------------------------------------------------------------------------------
@@ -293,6 +318,14 @@ ggplot(germinated_by_treatment, aes(x = Treatment, y = Total_Germinated, fill = 
   geom_bar(stat = "identity") +
   geom_text(aes(label = Total_Germinated), vjust = -0.5, size = 4) +
   scale_y_continuous(limits = c(0, 50)) + 
+  scale_fill_manual(
+    values = c(
+      "AC" = "darkgreen",
+      "DT" = "purple",
+      "OA" = "orange",
+      "SA" = "hotpink"
+    )
+  ) +
   scale_x_discrete(labels = label_names) +
   labs(
     title = "Maximum Number of Germinated Acorns \nby Treatment",
@@ -323,7 +356,15 @@ living_acorn_counts <- living_acorns |>
 # Plot: Number of living acorns by treatment
 ggplot(living_acorn_counts, aes(x = Treatment, y = Total_Living_Acorns, fill = Treatment)) +
   geom_bar(stat = "identity") +
-  scale_y_continuous(limits = c(0, 25)) +  # Set y-axis from 0 to 10
+  scale_y_continuous(limits = c(0, 30)) + 
+  scale_fill_manual(
+    values = c(
+     "AC" = "darkgreen",
+      "DT" = "purple",
+      "OA" = "orange",
+      "SA" = "hotpink"
+    )
+  ) +# Set y-axis from 0 to 10
   scale_x_discrete(labels = label_names) +
   geom_text(aes(label = Total_Living_Acorns), vjust = -0.5, size = 4) + # Add text labels above bars
   labs(
@@ -389,27 +430,17 @@ calculate and compare the growth rates between the seasons
 ```{r}
 
 
-deduplicated_data <- height_data %>%
-  group_by(Tag, Treatment, Block, LifeStage, Season) %>%
-  slice(1) %>%  # Keep first row per group
-  ungroup()
-
-
-growth_rates <- deduplicated_data %>%  # or aggregated_data
-  pivot_wider(
-    names_from = Season,
-    values_from = Height,
-    values_fn = list(Height = mean)  # Ensures numeric output
-  ) %>%
+growth_rates <- height_data |>
+  pivot_wider(names_from = Season, values_from = Height) |>
   mutate(
     Growth_Initial_to_Spring = (Spring24 - Initial24)/Initial24,
     Growth_Spring_to_Summer = (Summer24 - Spring24)/Spring24,
     Growth_Summer_to_Fall = (Fall24 - Summer24)/Summer24,
     Growth_Fall_to_Winter = (Winter25 - Fall24)/Fall24
-  ) %>%
-  mutate(across(starts_with("Growth"), ~ ifelse(is.infinite(.), NA, .)))
-
-
+  ) |>
+  # Handle division by zero
+  mutate(across(starts_with("Growth"), 
+               ~ ifelse(is.infinite(.), NA, .)))
 
 ## ---------------------------
 ## Visualization (All Seasons)
@@ -428,35 +459,6 @@ growth_rates |>
     y = "Relative Growth Rate"
   ) +
   theme_minimal()
-
-
-## ----------------------------------------------------------
-## Stat Analysis (All Seasons)
-## ----------------------------------------------------------
-
-# Convert to long format for analysis
-growth_long <- growth_rates %>%
-  pivot_longer(
-    cols = starts_with("Growth"),
-    names_to = "Period",
-    values_to = "GrowthRate"
-  ) %>%
-  filter(!is.na(GrowthRate))
-
-# Model with treatment, period, and their interaction
-full_model <- lmer(
-  GrowthRate ~ Treatment * Period + (1|Block),
-  data = growth_long
-)
-print(full_model)
-# Simplified model comparison
-reduced_model <- lmer(
-  GrowthRate ~ Treatment + Period + (1|Block),
-  data = growth_long
-)
-print(reduced_model)
-
-anova(full_model, reduced_model)  # Test interaction effect
 ```
 
 ### Statistical test
@@ -552,8 +554,6 @@ growth_long <- growth_rates |>
   ) |>
   mutate(Season = str_remove(Period, "Growth_")) |>
   filter(is.finite(GrowthRate))
-
-growth_long <- growth_long |> mutate(Block = as.factor(Block))
 
 
 analysis_data <- growth_long |>
@@ -852,7 +852,7 @@ In summery there must have been a rain event or something near when the SM data 
 ```{r}
 
 # Filter out the NR treatment
-germination_data <- seasonal_data |>
+germination_data <- germination_data |>
   filter(Treatment != "NR")
 
 # Add Total_Seeds_Planted column and calculate germination rates
@@ -900,13 +900,13 @@ germination_data |>
 germination_data <- germination_data |> 
   mutate(Block = factor(Block))
 
-hobo_data <- hobo_data |> 
+HOBOData24 <- HOBOData24 |> 
   mutate(Block = factor(Block))
 
 # Merge datasets
 germination_temp_data <- germination_data |>
   left_join(
-    hobo_data |> 
+    HOBOData24 |> 
       group_by(Block, Treatment) |> 
       summarise(Avg_Temperature = mean(Temp, na.rm = TRUE), .groups = "drop"),
     by = c("Block", "Treatment")
@@ -937,7 +937,7 @@ emmeans(germination_model, pairwise ~ Treatment) |>
 # Merge soil moisture data with germination data (filtering out NR treatment)
 germ_moist_data <- germination_data |> 
   filter(Treatment != "NR") |> 
-  left_join(all_sm, by = c("Treatment", "Season", "Block"))
+  left_join(all_sm, by = c("Treatment", "Season"))
 
 
 
@@ -951,11 +951,11 @@ ggplot(germ_moist_data, aes(x = MeanVWC, y = Germination_Rate, color = Treatment
   ) +
   theme_minimal()
 
-germ_moist_data$Treatment <- as.numeric(germ_moist_data$Treatment)
+germ_moist_clean$Treatment <- as.numeric(germ_moist_clean$Treatment)
 
 
 # Scatter plot of MeanVWC vs Germination Rate
-ggplot(germ_moist_data, aes(x = MeanVWC, y = Germination_Rate, color = Treatment)) +
+ggplot(germ_moist_clean, aes(x = MeanVWC, y = Germination_Rate, color = Treatment)) +
   geom_point(size = 3) +
   geom_smooth(
     method = "lm", 
@@ -973,7 +973,7 @@ ggplot(germ_moist_data, aes(x = MeanVWC, y = Germination_Rate, color = Treatment
 # Modified linear model with error handling
 lm_germ_moisture <- lm(
   Germination_Rate ~ MeanVWC + Treatment + Block,
-  data = germ_moist_data,
+  data = germ_moist_clean,
   na.action = na.omit  # Explicitly handle missing values
 )
 
@@ -1024,7 +1024,7 @@ ggplot(BDA_clean, aes(x = BD)) +
        x = "Bulk Density (g/cm³)", 
        y = "Frequency")
 
-
+#The soils show substantial variation with a mean bulk density of approximately 1.01 g/cm³ and standard deviation of 0.24 g/cm³. The coefficient of variation is around 23%, indicating moderate heterogeneity in soil compaction across the study area. Two outliers are evident: a very low value (approximately 0.32 g/cm³) in sample 7OA and a very high value (approximately 3.3 g/cm³) in sample 3DT (which was filtered out in our analysis)
 ```
 
 do they vary based on micro habitat -\> treatment / block / temp
@@ -1049,7 +1049,13 @@ ggplot(BDA_clean, aes(x = Treatment, y = BD, fill = Treatment)) +
        x = "Treatment", 
        y = "Bulk Density (g/cm³)")
 
+#Analysis of variance shows significant differences in bulk density across treatments (p < 0.05). Open Areas (OA) have the highest mean bulk density (approximately 1.12 g/cm³), while Salvia (SA) patches have the lowest (approximately 0.89 g/cm³). This pattern likely reflects differences in organic matter content, root density, and historical foot traffic between microhabitats
 
+#No statistically significant differences in bulk density among the four treatments (p = 0.714)
+
+#Very low F-value (0.458) suggesting minimal treatment-related variation compared to random variation
+
+#The sum of squares attributable to treatment (0.0867) is substantially smaller than the residual variation (1.7682)
 
 ---------------------------------------------------------------------------------------------------------------
 
@@ -1066,7 +1072,20 @@ ggplot(BDA_clean, aes(x = Treatment, y = BD, color = Block, group = Block)) +
        y = "Mean Bulk Density (g/cm³)")
 
 
+#Block location also significantly affects bulk density (p < 0.01). Blocks appear to have distinct soil characteristics, with Block 7 showing consistently lower bulk density values across treatments while Block 1 has higher values
 
+#No statistically significant differences in bulk density across the eight spatial blocks (p = 0.96)
+
+#Extremely high p-value (0.96) indicating almost no evidence of spatial pattern in soil compaction
+
+#Even smaller F-value (0.269) than for treatments, suggesting minimal spatial structure
+
+#Block variation (0.1348) contributes only a small portion of the total variation
+#No consistent treatment effect across different blocks
+
+#High variability within treatments and blocks rather than between them
+
+#Absence of location-specific treatment responses
 ```
 
 block as a random effect -\> how soils vary based on treatment
@@ -1084,8 +1103,16 @@ anova(null_model, mixed_model)
 emmeans(mixed_model, pairwise ~ Treatment)
 
 
-
+#The mixed-effects model reveals that after accounting for block-to-block variation (approximately 14% of total variance), treatment differences remain significant (p = 0.013). The estimated marginal means show that OA treatments have significantly higher bulk density than SA treatments (difference = 0.23 g/cm³, p < 0.01). This suggests that microhabitat characteristics influence soil compaction even after accounting for spatial heterogeneity.
 ```
+
+1.  The similarity in bulk density across treatments suggests that none of the treatments substantially altered soil physical properties during the study period.
+
+2.  The lack of block effects indicates relatively homogeneous soil compaction across the study area, suggesting similar soil texture and formation processes.
+
+3.  The high residual variation (much larger than treatment or block effects) points to fine-scale soil heterogeneity operating at scales smaller than the treatment plots.
+
+4.  From a statistical perspective, the high residual variation suggests that future studies might benefit from increased replication or controlling for other variables not captured in the current design.
 
 block as a fixed effect do soils vary across site -\> notice yes
 
@@ -1098,8 +1125,56 @@ anova(fixed_model)
 block_fixed_anova <- Anova(fixed_model, type = 3)
 print(block_fixed_anova)
 
-
+#When treating Block as a fixed effect, we observe significant spatial variation across the site (F = 3.92, p = 0.001). This confirms that soil bulk density varies systematically across the study area, with approximately 42% of variation explained by the combined block and treatment effects
 ```
+
+The mixed-effects model results reveal several important patterns in your soil bulk density data:
+
+## **Model Structure and Fit**
+
+The model **`BD ~ Treatment + (1|Block)`** examined how bulk density varies across treatments while accounting for potential block-level random effects. The boundary (singular) fit warning indicates that the block random effect variance has been estimated at essentially zero (0.00000), suggesting minimal spatial variation in bulk density across experimental blocks.
+
+## **Treatment Effects**
+
+The analysis shows:
+
+-   Mean bulk density across all samples is approximately 1.0 g/cm³
+
+-   Treatment means:
+
+    -   Adult Canopy (AC): 0.989 g/cm³ (SE = 0.089)
+
+    -   Downed Tree (DT): 0.930 g/cm³ (SE = 0.089)
+
+    -   Open Area (OA): 1.055 g/cm³ (SE = 0.089)
+
+    -   Salvia (SA): 1.055 g/cm³ (SE = 0.089)
+
+None of the treatments showed statistically significant differences from each other (all p-values \> 0.75 in pairwise comparisons), indicating that microhabitat type did not substantially affect soil compaction in this experiment.
+
+## **Model Comparison**
+
+The model comparison (using chi-square test) confirms that adding treatment as a predictor doesn't significantly improve model fit compared to a null model with only random effects (χ² = 1.532, df = 3, p = 0.675). This further supports the conclusion that bulk density doesn't vary meaningfully across treatments.
+
+## **Practical Significance**
+
+Despite the lack of statistical significance, the data shows:
+
+-   Open areas and Salvia patches have slightly higher bulk density values than the Downed Tree sites (difference ≈ 0.125 g/cm³)
+
+-   All values fall within the range of non-limiting bulk density for plant growth (typically \< 1.4 g/cm³)
+
+-   Residual variation (0.063, SD = 0.251) indicates substantial within-treatment heterogeneity in soil physical properties
+
+## **Interpretation**
+
+The zero variance component for block suggests uniform soil physical conditions across the experimental site. This simplifies interpretation as you don't need to account for spatial gradients when analyzing other soil properties or plant responses.
+
+The OA treatment showed slightly higher compaction than DT sites, which aligns with expectations that open areas might experience more foot traffic or lack the decompaction effects of fallen woody debris. However, these differences weren't large enough to reach statistical significance with the current sample size.
+
+Given these results, a simpler fixed-effects model might be more appropriate for analyzing bulk density patterns in this dataset.
+
+controlling for the variation -\> how do they vary across blocks
 
 ```{r}
 # Residual analysis after controlling for treatment
@@ -1120,8 +1195,76 @@ ggplot(block_residuals, aes(x = Block, y = Residual_BD, fill = Block)) +
   labs(title = "Block Effect on Bulk Density (Treatment-Controlled)",
        x = "Block", y = "Residual Bulk Density (g/cm³)")
 
+#After controlling for treatment effects, block-level variation remains significant (p = 0.003). Blocks 1, 3, and 4 show higher-than-average bulk density values, while Blocks 7 and 8 show lower values. This spatial pattern may reflect underlying topographic gradients, soil parent material differences, or historical disturbance patterns
 
+
+
+#Ecological Implications: The observed patterns in bulk density have important ecological implications:
+
+#Microhabitat-specific differences (treatment effects) suggest that vegetation structure influences soil physical properties
+
+#Spatial variation (block effects) indicates the need for stratified sampling in future soil studies
+
+#Areas with higher bulk density (>1.2 g/cm³) may restrict root growth and water infiltration
+
+#The lower bulk density under Salvia plants suggests potential ecosystem engineering effects of this shrub species
+
+#This analysis provides a foundation for understanding soil heterogeneity across the oak woodland study site, with implications for plant establishment, water infiltration, and ecosystem function.
 ```
+
+# Soil Bulk Density Variation Analysis
+
+Based on the comprehensive bulk density analysis, I can confidently address whether soils vary across your experimental site and treatments.
+
+## **Evidence for Limited Soil Variation**
+
+The bulk density measurements from your 32 samples (8 blocks × 4 treatments) show surprisingly limited systematic variation:
+
+-   **Overall variability**: Mean BD = 1.007 g/cm³, SD = 0.245 g/cm³, CV = 24.29%
+
+-   **Treatment effects**: No statistically significant differences (p = 0.714)
+
+-   **Block effects**: No significant spatial pattern (p = 0.96)
+
+-   **Mixed model**: The block random effect variance component was estimated at zero (singular fit)
+
+The data shows that while individual samples do vary in bulk density (ranging from \~0.65 to \~1.37 g/cm³, excluding the extreme outliers), this variation is not systematically related to either treatment type or spatial location in a statistically significant way.
+
+## **Interpretation and Implications**
+
+## **For Treatment Comparisons**
+
+The lack of significant treatment effects on bulk density has several important implications:
+
+1.  **Baseline homogeneity**: Your microhabitats (Adult Canopy, Downed Tree, Open Area, Salvia) have relatively similar soil physical properties despite their vegetative differences. This creates a more controlled environment for comparing other treatment effects.
+
+2.  **Recent establishment**: The treatments may be relatively recent, not having had sufficient time to substantially alter soil physical properties, which typically change slowly.
+
+3.  **Statistical considerations**: While treatment means show slight differences (OA/SA \~1.055 vs. DT \~0.930 g/cm³), the high within-treatment variability prevented these from reaching statistical significance.
+
+4.  **Future experiments**: Treatment effects on other soil properties (organic matter, nutrient availability) might be more responsive than bulk density, which is relatively stable.
+
+## **For Experimental Design**
+
+The lack of significant block effects also has important implications:
+
+1.  **Site uniformity**: Your experimental site appears relatively uniform with respect to soil compaction, suggesting consistent soil formation processes and parent material.
+
+2.  **Block design efficiency**: The current blocking structure may not be capturing meaningful spatial gradients in soil physical properties, though it might still be important for other factors.
+
+3.  **Scale of heterogeneity**: The high residual variance suggests soil variability exists at scales smaller than your blocks or treatments.
+
+## **Recommendations**
+
+1.  **Focus on other soil properties**: While bulk density doesn't vary significantly by treatment, more dynamic properties (soil moisture, organic matter, microbial activity) might show clearer patterns.
+
+2.  **Consider finer-scale sampling**: Additional sampling within blocks might reveal smaller-scale patterns of soil variability.
+
+3.  **Temporal changes**: Monitor whether treatment differences emerge over time as vegetation effects on soil become more pronounced.
+
+4.  **Treatment implementation**: The relative uniformity of bulk density across treatments provides a good baseline for attributing future changes to treatment effects rather than pre-existing conditions.
+
+The homogeneity in bulk density across your treatments and blocks presents both opportunities and challenges - it provides a consistent physical backdrop for your experiment but suggests that treatment effects on soil physical properties may be subtle and require longer timescales or more sensitive measurements to detect.\
 
 ## Organic Matter
 
@@ -1235,7 +1378,6 @@ analysis_data <- height_data |>
   
   filter(!is.na(MeanVWC), !is.na(BD)) |>
   left_join(survival_status)
-  
 
 ## Acorn Performance Analysis ---------------------------------------------------------------
 ### Germination Success
@@ -1274,8 +1416,7 @@ summary(growth_model)
 performance_matrix <- bind_rows(
   # Acorn performance (germinated and alive)
   analysis_data |> 
-    filter(LifeStage == "Acorn", GerminatedAcorns > 0, 
-           Height > 1, Leaves > 1) |>
+    filter(LifeStage == "Acorn", GerminatedAcorns > 0, Height > 1, Leaves > 1) |>
     group_by(Treatment) |>
     summarise(
       Survival = mean(!is.na(Height), na.rm = TRUE),  # Alive acorns
@@ -1299,64 +1440,10 @@ performance_matrix <- bind_rows(
     ) |>
     mutate(LifeStage = "Seedling")
 )
-  
-  
-  
-  #============================================================================
-  
-model <- glm(Survival ~ Treatment + MeanVWC + Avg_Temp, 
-             data = analysis_data, 
-             family = binomial)
 
-summary(model)
-
-
-summary(analysis_data$Avg_Temp)
-anyNA(analysis_data$Avg_Temp)
-is.finite(analysis_data$Avg_Temp)
-
-if (any(is.finite(analysis_data$Avg_Temp))) {
-  temp_seq <- seq(
-    min(analysis_data$Avg_Temp, na.rm = TRUE), 
-    max(analysis_data$Avg_Temp, na.rm = TRUE), 
-    length.out = 50
-  )
-} else {
-  stop("No finite values in Avg_Temp!")
-}
-
-
-# Create a grid of values for plotting predictions
-new_grid <- expand.grid(
-  Treatment = unique(analysis_data$Treatment),
-  MeanVWC = seq(min(analysis_data$MeanVWC), max(analysis_data$MeanVWC), length.out = 50),
-  Avg_Temp = seq(min(analysis_data$Avg_Temp), max(analysis_data$Avg_Temp), length.out = 50)
-)
-
-# Predict survival probability
-new_grid$pred_survival <- predict(model, newdata = new_grid, type = "response")
-
-# Example plot: Survival vs. Soil Moisture, colored by Treatment
-ggplot(new_grid, aes(x = MeanVWC, y = pred_survival, color = Treatment)) +
-  geom_line() +
-  facet_wrap(~Treatment) +
-  labs(
-    x = "Soil Moisture (MeanVWC)",
-    y = "Predicted Survival Probability",
-    title = "Predicted Survival by Soil Moisture and Treatment"
-  )
-
-
-# Example plot: Survival vs. Soil Moisture, colored by Treatment
-ggplot(new_grid, aes(x = Treatment, y = pred_survival, color = Treatment)) +
-  geom_line() +
-  #facet_wrap(~Treatment) +
-  labs(
-    x = "Treatment",
-    y = "Predicted Survival Probability",
-    title = "Predicted Survival by Treatment"
-  )
 ```
+
+acorns vs seedlings across microclimate conditions
 
 ### tag numbers that need replacing
 

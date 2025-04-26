@@ -15,6 +15,9 @@ library(nlme)
 library(car)
 library(ggplot2)
 library(lubridate)
+install.packages("readxl")
+library(readxl)
+
 ```
 
 Load Data
@@ -22,51 +25,50 @@ Load Data
 ```{r}
 
 
-#HOBO summer contains all of the temp data for spring, summer, and fall 3/20-10/10
 
-HOBOSummer1 <- read_csv('HOBO Data Summer 2024/HB01Summer24.csv')
-HOBOSummer2 <- read_csv('HOBO Data Summer 2024/HB02Summer24.csv')
-HOBOSummer3 <- read_csv('HOBO Data Summer 2024/HB03Summer24.csv')
-HOBOSummer4 <- read_csv('HOBO Data Summer 2024/HB04Summer24.csv')
-HOBOSummer5 <- read_csv('HOBO Data Summer 2024/HB05Summer24.csv')
-HOBOSummer6 <- read_csv('HOBO Data Summer 2024/HB06Summer24.csv')
-HOBOSummer7 <- read_csv('HOBO Data Summer 2024/HB07Summer24.csv')
-HOBOSummer8 <- read_csv('HOBO Data Summer 2024/HB08Summer24.csv')
-HOBOSummer9 <- read_csv('HOBO Data Summer 2024/HB09Summer24.csv')
-HOBOSummer10 <- read_csv('HOBO Data Summer 2024/HB10Summer24.csv')
-HOBOSummer11 <- read_csv('HOBO Data Summer 2024/HB11Summer24.csv')
-HOBOSummer12 <- read_csv('HOBO Data Summer 2024/HB12Summer24.csv')
-HOBOSummer13 <- read_csv('HOBO Data Summer 2024/HB13Summer24.csv')
-HOBOSummer14 <- read_csv('HOBO Data Summer 2024/HB14Summer24.csv')
-HOBOSummer15 <- read_csv('HOBO Data Summer 2024/HB15Summer24.csv')
-HOBOSummer16 <- read_csv('HOBO Data Summer 2024/HB16Summer24.csv')
-HOBOSummer17 <- read_csv('HOBO Data Summer 2024/HB17Summer24.csv')
-HOBOSummer18 <- read_csv('HOBO Data Summer 2024/HB18Summer24.csv')
-HOBOSummer19 <- read_csv('HOBO Data Summer 2024/HB19Summer24.csv')
-HOBOSummer20 <- read_csv('HOBO Data Summer 2024/HB20Summer24.csv')
+HOBO1 <- read_excel('hobotemperaturewinter2025/HB01 2025.xlsx')
+HOBO2 <- read_excel('hobotemperaturewinter2025/HB02 2025.xlsx')
+HOBO3 <- read_excel('hobotemperaturewinter2025/HB03 2025.xlsx')
+HOBO4 <- read_excel('hobotemperaturewinter2025/HB04 2025.xlsx')
+HOBO5 <- read_excel('hobotemperaturewinter2025/HB05 2025.xlsx')
+HOBO6 <- read_excel('hobotemperaturewinter2025/HB06 2025.xlsx')
+HOBO7 <- read_excel('hobotemperaturewinter2025/HB07 2025.xlsx')
+HOBO8 <- read_excel('hobotemperaturewinter2025/HB08 2025.xlsx')
+HOBO9 <- read_excel('hobotemperaturewinter2025/HB09 2025.xlsx')
+HOBO10 <- read_excel('hobotemperaturewinter2025/HB10 2025.xlsx')
+HOBO11 <- read_excel('hobotemperaturewinter2025/HB11 2025.xlsx')
+HOBO12 <- read_excel('hobotemperaturewinter2025/HB12 2025.xlsx')
+HOBO13 <- read_excel('hobotemperaturewinter2025/HB13 2025.xlsx')
+HOBO14 <- read_excel('hobotemperaturewinter2025/HB14 2025.xlsx')
+HOBO15 <- read_excel('hobotemperaturewinter2025/HB15 2025.xlsx')
+HOBO16 <- read_excel('hobotemperaturewinter2025/HB16 2025.xlsx')
+HOBO17 <- read_excel('hobotemperaturewinter2025/HB17 2025.xlsx')
+HOBO18 <- read_excel('hobotemperaturewinter2025/HB18 2025.xlsx')
+HOBO19 <- read_excel('hobotemperaturewinter2025/HB19 2025.xlsx')
+HOBO20 <- read_excel('hobotemperaturewinter2025/HB20 2025.xlsx')
 
 # Step 1: Combine all datasets with an ID column to identify the source
 HOBOData24 <- bind_rows(
-  HOBOSummer1 = HOBOSummer1, HOBOSummer2 = HOBOSummer2, HOBOSummer3 = HOBOSummer3,
-  HOBOSummer4 = HOBOSummer4, HOBOSummer5 = HOBOSummer5, HOBOSummer6 = HOBOSummer6,
-  HOBOSummer7 = HOBOSummer7, HOBOSummer8 = HOBOSummer8, HOBOSummer9 = HOBOSummer9,
-  HOBOSummer10 = HOBOSummer10, HOBOSummer11 = HOBOSummer11, HOBOSummer12 = HOBOSummer12,
-  HOBOSummer13 = HOBOSummer13, HOBOSummer14 = HOBOSummer14, HOBOSummer15 = HOBOSummer15,
-  HOBOSummer16 = HOBOSummer16, HOBOSummer17 = HOBOSummer17, HOBOSummer18 = HOBOSummer18,
-  HOBOSummer19 = HOBOSummer19, HOBOSummer20 = HOBOSummer20,
+  HOBO1 = HOBO1, HOBO2 = HOBO2, HOBO3 = HOBO3,
+  HOBO4 = HOBO4, HOBO5 = HOBO5, HOBO6 = HOBO6,
+  HOBO7 = HOBO7, HOBO8 = HOBO8, HOBO9 = HOBO9,
+  HOBO10 = HOBO10, HOBO11 = HOBO11, HOBO12 = HOBO12,
+  HOBO13 = HOBO13, HOBO14 = HOBO14, HOBO15 = HOBO15,
+  HOBO16 = HOBO16, HOBO17 = HOBO17, HOBO18 = HOBO18,
+  HOBO19 = HOBO19, HOBO20 = HOBO20,
   .id = "Sensor"
 )
 
 # Step 2: Rename the temperature column
 HOBOData24 <- HOBOData24 |>
-  rename('Temp' = 'Temperature (°C)')
+  rename('Temp' = 'Temperature , °C')
 
 # Step 3: Create a lookup table with sensor, block, and treatment information
 lookup_table <- data.frame(
-  Sensor = c("HOBOSummer1", "HOBOSummer2", "HOBOSummer3", "HOBOSummer4", "HOBOSummer5", 
-             "HOBOSummer6", "HOBOSummer7", "HOBOSummer8", "HOBOSummer9", "HOBOSummer10", 
-             "HOBOSummer11", "HOBOSummer12", "HOBOSummer13", "HOBOSummer14", "HOBOSummer15", 
-             "HOBOSummer16", "HOBOSummer17", "HOBOSummer18", "HOBOSummer19", "HOBOSummer20"),
+  Sensor = c("HOBO1", "HOBO2", "HOBO3", "HOBO4", "HOBO5", 
+             "HOBO6", "HOBO7", "HOBO8", "HOBO9", "HOBO10", 
+             "HOBO11", "HOBO12", "HOBO13", "HOBO14", "HOBO15", 
+             "HOBO16", "HOBO17", "HOBO18", "HOBO19", "HOBO20"),
   Block = c(1, 1, 1, 1, 1, 3, 3, 3, 3, 3, 6, 6, 6, 6, 6, 7, 7, 7, 7, 7),
   Treatment = c("DT", "OA", "NR", "AC", "SA",
                 "DT", "SA", "NR", "AC", "OA",
@@ -83,7 +85,7 @@ HOBOData24 <- HOBOData24 |>
   select(-Sensor)
 
 HOBOData24 <- HOBOData24 |>
-  separate('Date-Time (PDT)', into = c("Date", "Time"), sep = " ")
+  separate('Date-Time (PST/PDT)', into = c("Date", "Time"), sep = " ")
 ```
 
 Clean the data
@@ -94,11 +96,11 @@ Clean the data
     # Convert Date column to Date format if it's not already
 HOBOData24 <- HOBOData24 |>
   mutate(
-    Date = as.Date(as.character(Date), format = "%m/%d/%Y"),  # Ensure the original Date column is used
     Season = case_when(
-      Date >= as.Date("2024-03-20") & Date < as.Date("2024-06-21") ~ "Spring",
-      Date >= as.Date("2024-06-21") & Date < as.Date("2024-09-22") ~ "Summer",
-      Date >= as.Date("2024-09-22") & Date <= as.Date("2024-10-10") ~ "Fall",
+      Date >= "2024-03-20" & Date < "2024-06-21" ~ "Spring24",
+      Date >= "2024-06-21" & Date < "2024-09-22" ~ "Summer24",
+      Date >= "2024-09-22" & Date <= "2024-10-10" ~ "Fall24",
+      Date >= "2024-10-10" & Date <= "2025-02-06" ~ "Winter25",
       TRUE ~ NA_character_
     )
   )
@@ -111,26 +113,36 @@ HOBOData24 <- HOBOData24 |>
 
 Group the data
 
+Average daily temp
+
 ```{r}
 
 
-# Calculate average daily temperature for Fall
-avFall24Day <- HOBOData24 |>
-  filter(Season == "Fall") |>
-  group_by(Date) |>
-  summarise(avg_temp = mean(Temp, na.rm = TRUE))
-
 # Calculate average daily temperature for Spring
 avSpring24Day <- HOBOData24 |>
-  filter(Season == "Spring") |>
+  filter(Season == "Spring24") |>
   group_by(Date) |>
   summarise(avg_temp = mean(Temp, na.rm = TRUE))
 
 # Calculate average daily temperature for Summer
 avSummer24Day <- HOBOData24 |>
-  filter(Season == "Summer") |>
+  filter(Season == "Summer24") |>
   group_by(Date) |>
   summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+# Calculate average daily temperature for Fall
+avFall24Day <- HOBOData24 |>
+  filter(Season == "Fall24") |>
+  group_by(Date) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
+
+# Calculate average daily temperature for Winter
+avWinter25Day <- HOBOData24 |>
+  filter(Season == "Winter25") |>
+  group_by(Date) |>
+  summarise(avg_temp = mean(Temp, na.rm = TRUE))
+
 
 avg_temp <- HOBOData24 |>
   group_by(Date, Season, Block, Month) |>
@@ -143,14 +155,20 @@ avg_temp <- HOBOData24 |>
 ```{r}
 # Summarize daily temperatures, including standard deviation
 daily_temps <- HOBOData24 |>
-  group_by(Date, Season, Block, Treatment) |>
+  group_by(Date, Season, Block, Treatment, Month) |>
   summarise(
     min_temp = min(Temp, na.rm = TRUE),
     max_temp = max(Temp, na.rm = TRUE),
     avg_temp = mean(Temp, na.rm = TRUE),
-    sd_temp = sd(Temp, na.rm = TRUE),  # Calculate standard deviation
+    sd_temp = sd(Temp, na.rm = TRUE),
+    mean_max_temp = mean(max_temp, na.rm = TRUE),
+    se_max_temp = sd(max_temp, na.rm = TRUE) / sqrt(n()),
+    mean_min_temp = mean(min_temp, na.rm = TRUE),
+    se_min_temp = sd(min_temp, na.rm = TRUE) / sqrt(n()),
+# Calculate standard deviation
     .groups = "drop"  # Prevent grouped output warning
   )
+
 
 # Create the plot
 ggplot(daily_temps, aes(x = Date)) +
@@ -165,6 +183,7 @@ ggplot(daily_temps, aes(x = Date)) +
 
 #movig/sliding moving average window average for 5 days 
 #group by treatment 
+
 
 
  
@@ -189,7 +208,7 @@ ggplot(monthly_avg_temp, aes(x = Season, y = avg_temp, fill = Season)) +
        x = "Season",
        y = "Average Temperature (°C)") 
 
-ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = Month)) +
+ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = avg_temp)) +
   geom_bar(stat = "identity", position = "dodge") +
   labs(title = "Average Temperature by Month",
        x = "Month",
@@ -202,7 +221,7 @@ ggplot(monthly_avg_temp, aes(x = Month, y = avg_temp, fill = Month)) +
 
 #change the order of the seasons to match daata collection dates 
 HOBOData24 <- HOBOData24 |>
-  mutate(Season = factor(Season, levels = c("Spring", "Summer", "Fall")))
+  mutate(Season = factor(Season, levels = c("Spring24", "Summer24", "Fall24", "Winter25")))
 
 # Summarize data by Season and Treatment
 data_sum <- HOBOData24 |>
@@ -248,6 +267,58 @@ ggsave(
   units = "px",
   dpi = 300
 )
+
+
+
+
+# Summarize daily max and min temperatures by Month and Treatment
+daily_temp_summary <- daily_temps |>
+  group_by(Month, Treatment) |>
+  summarise(
+    mean_max_temp = mean(max_temp, na.rm = TRUE),
+    se_max_temp = sd(max_temp, na.rm = TRUE) / sqrt(n()),
+    mean_min_temp = mean(min_temp, na.rm = TRUE),
+    se_min_temp = sd(min_temp, na.rm = TRUE) / sqrt(n()),
+    .groups = "drop"
+  )
+
+# Plot Mean Daily Maximum Temperature
+ggplot(daily_temp_summary, aes(x = Month, y = mean_max_temp, color = Treatment)) +
+  geom_line(aes(group = Treatment), position = position_dodge(width = 0.2)) +
+  geom_point(position = position_dodge(width = 0.2), size = 3) +
+  geom_errorbar(aes(
+    ymin = mean_max_temp - se_max_temp,
+    ymax = mean_max_temp + se_max_temp
+  ), width = 0.1, position = position_dodge(width = 0.2)) +
+  labs(
+    x = "Month 2024",
+    y = "Mean Daily Maximum Temperature (°C)",
+    color = "Treatment",
+    title = "Mean Daily Maximum Temperature by Treatment"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("#1F618D", "#27AE60", "#B7950B", "#E74C3C", "#8E44AD")) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+# Plot Mean Daily Minimum Temperature
+ggplot(daily_temp_summary, aes(x = Month, y = mean_min_temp, color = Treatment)) +
+  geom_line(aes(group = Treatment), position = position_dodge(width = 0.2)) +
+  geom_point(position = position_dodge(width = 0.2), size = 3) +
+  geom_errorbar(aes(
+    ymin = mean_min_temp - se_min_temp,
+    ymax = mean_min_temp + se_min_temp
+  ), width = 0.1, position = position_dodge(width = 0.2)) +
+  labs(
+    x = "Month 2024",
+    y = "Mean Daily Minimum Temperature (°C)",
+    color = "Treatment",
+    title = "Mean Daily Minimum Temperature by Treatment"
+  ) +
+  theme_minimal() +
+  scale_color_manual(values = c("#1F618D", "#27AE60", "#B7950B", "#E74C3C", "#8E44AD")) +
+  theme(axis.text.x = element_text(angle = 45, vjust = 1, hjust = 1))
+
+
 
 ```
 

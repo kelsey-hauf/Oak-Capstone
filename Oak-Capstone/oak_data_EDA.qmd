@@ -1,0 +1,522 @@
+---
+title: "oak_data_EDA"
+author: "Kelsey Hauf"
+format: html
+editor: visual
+---
+
+## Load Libraries + Data
+
+```{r}
+#load libaraies
+library(tidyverse)
+library(dplyr)
+library(lattice)
+library(nlme)
+library(car)
+library(ggplot2)
+```
+
+## Load + Clean Oak Data
+
+```{r}
+#hello
+
+#Winter (initial) seedling data 
+
+#size of the seedlings when planted
+initial_size <- read_csv('Oak_Seedlings_Initial_size.csv')
+
+initial_size <- initial_size |>
+  select(-`Page`)
+
+
+#spring soil moisture data
+springSM <- read_csv('SpringSoilMoistureORPOY.csv')
+
+
+# seedling height, # of leaves, and acorn germination for spring
+spring24 <- read_csv('2024 Spring Seedling & Acorn Height and Survival ORPOY - Spring Data.csv')
+
+#making the cloumn names match the preexisting data sets 
+spring24 <- spring24 |>
+  select(-`Data Enterer Initials`, -`Notes`, -`Page Number`, -`Date`) |>
+  rename('Block' = 'Block Number') |>
+  rename('Tag' = 'Tag Number') |>
+  rename('LifeStage' = 'Acorn or seedling?') |>
+  rename('Height' = 'Seedling Height') |>
+  rename('GerminatedAcorns' = 'Number of Acorns That Germinated') |>
+  rename('Leaves' = '# Leaves on Seedling') |>
+  rename('Salvia' = 'Is Salvia apiana alive') 
+
+#summer soil moisture 
+summerSM <- read_csv('2024 Summer Soil Moisture ORPOY - Summer24.csv')
+
+# seedling height, # of leaves, and acorn germination for summer
+summer24 <- read_csv('2024 Summer Seedling & Acorn Height and Survival ORPOY.xlsx - Summer Data.csv')
+
+#making the cloumn names match the preexisting data sets 
+summer24 <- summer24 |>
+  select(-`Data Enterer Initials`, -`Notes`, -`Page Number`, -`Date`) |>
+  rename('Block' = 'Block Number') |>
+  rename('Tag' = 'Tag Number') |>
+  rename('LifeStage' = 'Acorn or seedling?') |>
+  rename('Height' = 'Seedling Height') |>
+  rename('GerminatedAcorns' = 'Number of Acorns That Germinated') |>
+  rename('Leaves' = '# Leaves on Seedling') |>
+  rename('Salvia' = 'Is Salvia apiana alive') 
+
+
+
+```
+
+## Create a data set that has the heights across seasons to compare them
+
+```{r}
+
+# Filter the initial seedling heights data and add a column that indicates what season its from
+initial_heights <- initial_size |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  select(Tag, Treatment, Height, Block) |>  
+  mutate(Season = 'Initial') |>
+  mutate(Lifestage = 'Seedling')
+
+# Filter the spring24 seedling heights data
+spring_heights <- spring24 |> 
+  filter(LifeStage == 'Seedling') |> 
+  select(Tag, Treatment, Height, Block) |> 
+  mutate(Season = 'Spring') |>
+  mutate(Lifestage = 'Seedling')
+
+
+# Filter the summer24 seedling heights data
+summer_heights <- summer24 |> 
+  filter(LifeStage == 'Seedling') |> 
+  select(Tag, Treatment, Height, Block) |> 
+  mutate(Season = 'Summer') |>
+  mutate(Lifestage = 'Seedling')
+
+
+
+# Combine the  datasets
+seedling_height_data <- bind_rows(initial_heights, spring_heights, summer_heights)
+
+# View the combined data
+#print(seedling_height_data)
+  
+
+```
+
+# Height
+
+Create a graph that compares the overall heights
+
+```{r}
+#take out NR treatment 
+seedling_height_data <- seedling_height_data |> 
+  filter(Treatment != 'NR') 
+  
+
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Season , y = Height, fill = Season) +
+  geom_col(position = position_dodge())
+
+```
+
+Create a graph that compares the change in heights by treatment
+
+```{r}
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Treatment , y = Height, fill = Season) +
+  labs(x = "Treatment", y = "Height", fill = "Season") +  # Add labels
+  geom_col(position = position_dodge())
+
+
+```
+
+Create a graph that compares the change in heights by block
+
+```{r}
+seedling_height_data |>
+
+  ggplot() +
+  aes(x = Block , y = Height, fill = Season) +
+  labs(x = "Block", y = "Height", fill = "Season") +  # Add labels
+  geom_col(position = position_dodge())
+```
+
+## Growth Rate
+
+calculate and compare the growth rates between the seasons
+
+```{r}
+# Pivot wider to have heights for each season in separate columns
+seedling_height_wide <- seedling_height_data |>
+  pivot_wider(names_from = Season, values_from = Height)
+
+# Calculate growth rates
+seedling_height_wide <- seedling_height_wide |>
+  mutate(
+    Growth_Initial_to_Spring = (Spring - Initial) / Initial,
+    Growth_Spring_to_Summer = (Summer - Spring) / Spring
+  )
+
+# Pivot longer to prepare for visualization
+growth_rate_data <- seedling_height_wide |>
+  select(Tag, Treatment, Block, Growth_Initial_to_Spring, Growth_Spring_to_Summer) |>
+  pivot_longer(
+    cols = starts_with("Growth"),
+    names_to = "Growth_Period",
+    values_to = "Growth_Rate"
+  )
+
+# Visualization: Compare growth rates by treatment
+growth_rate_data |>
+  ggplot() +
+  aes(x = Treatment, y = Growth_Rate, fill = Growth_Period) +
+  geom_col(position = position_dodge()) +
+  labs(
+    x = "Treatment",
+    y = "Growth Rate",
+    fill = "Growth Period",
+    title = "Comparison of Growth Rates by Treatment"
+  )
+```
+
+Summarize growth rate patterns across treatments/seasons
+
+```{r}
+
+growth_rate_data |>
+  group_by(Treatment, Growth_Period) |>
+  summarize(
+    Mean_Growth = mean(Growth_Rate, na.rm = TRUE),
+    SD_Growth = sd(Growth_Rate, na.rm = TRUE),
+    .groups = "drop"
+  )
+
+#plot it 
+ggplot(growth_rate_data, 
+       aes(x = Treatment, 
+           y = Growth_Rate, 
+           fill = Growth_Period)) +
+  
+  geom_boxplot() +
+  labs(x = "Treatment", 
+       y = "Growth Rate", 
+       fill = "Growth Period")
+
+
+```
+
+Statistical test
+
+Determine if growth rates differ significantly between treatments
+
+```{r}
+#remove any NAs
+growth_rate_data <- growth_rate_data |>
+  filter(!is.na(Growth_Rate) & is.finite(Growth_Rate))
+
+#ANOVA for treatments
+anova_result <- aov(Growth_Rate ~ Treatment, data = growth_rate_data)
+summary(anova_result)
+
+#as of 11/21 The treatments did not significantly affect growth rates.
+
+```
+
+### **Temporal Analysis**
+
+Analyze how growth rates evolve over time and compare trajectories between treatments.
+
+```{r}
+ggplot(seedling_height_data, 
+       aes(x = Season, 
+           y = Height, 
+           color = Treatment, 
+           group = Tag)) +
+  
+  geom_line() +
+  labs(x = "Season", 
+       y = "Height", 
+       color = "Treatment", 
+       title = "Growth Rate change over time by Block") +
+ 
+   facet_wrap(~ Block)  # Create a separate plot for each Block
+
+```
+
+what about temperature? does it have an effect on growth rate
+
+```{r}
+#load in temp data 
+HOBOData24 <- readRDS("HOBOData24.rds")
+
+# Remove rows with NA in Growth_Rate or Avg_Temperature
+final_data_clean <- final_data |>
+  filter(!is.na(Growth_Rate) & !is.na(Avg_Temperature))
+
+# Convert Block and Treatment to character 
+growth_rate_data$Block <- as.character(growth_rate_data$Block)
+HOBOData24$Block <- as.character(HOBOData24$Block)
+growth_rate_data$Treatment <- as.character(growth_rate_data$Treatment)
+HOBOData24$Treatment <- as.character(HOBOData24$Treatment)
+
+
+# Merging the growth data with temperature data
+merged_data <- merge(growth_rate_data, HOBOData24, by = c("Block", "Treatment"))
+
+# Calculate average temperature by Block and Treatment
+agg_temp_data <- HOBOData24 |>
+  group_by(Block, Treatment) |>
+  summarise(Avg_Temperature = mean(Temp, na.rm = TRUE))
+
+# Merging the temperature data with the growth rate data
+final_data <- merge(growth_rate_data, agg_temp_data, by = c("Block", "Treatment"))
+
+# Linear model to test the effect of temperature on growth rate
+growth_rate_temp_model <- lm(Growth_Rate ~ Avg_Temperature, data = final_data)
+
+# Summary of the model
+summary(growth_rate_temp_model)
+
+# Model diagnostics
+plot(growth_rate_temp_model)
+
+
+#Temperature is a significant predictor of growth rate yay!
+
+
+#visualize it 
+
+ggplot(final_data, aes(x = Avg_Temperature, y = Growth_Rate)) +
+  geom_point(aes(color = Block, shape = Treatment), position = position_jitter(width = 0.1, height = 0), alpha = 0.7) +  # Jittering and adding Treatment shape
+  geom_smooth(method = "lm", se = FALSE, color = "red") +  # Add linear regression line
+  labs(x = "Average Temperature", y = "Growth Rate", title = "Growth Rate vs Average Temperature") +
+  theme_minimal() +
+  scale_color_discrete(name = "Block") +  # Legend for Block
+  scale_shape_manual(values = c(15, 17, 18, 19))  # Manually specify shapes for Treatment (can adjust the values for different shapes)
+
+
+
+#------------------------------------------------------------------------
+#Graveyard
+
+# Including treatment as additional predictor
+#growth_rate_temp_model2 <- lm(Growth_Rate ~ Avg_Temperature + Treatment, data = final_data)
+
+# Summary of the updated model
+#summary(growth_rate_temp_model2)
+
+```
+
+### Leaf Data
+
+## Initial Leaf Count EDA
+
+First we want to prove statistically if there is a relationship between leaf count and height
+
+```{r}
+# Create new columns with log-transformed values for Height and Leaves - Log transformation ensures the data meets the assumptions required for valid statistical analyses
+initial_size$lnHeight <- log(initial_size$Height + 1)
+initial_size$lnLeaves <- log(initial_size$Leaves + 1)
+
+# Histogram of the log-transformed Height - shows us if there is a normal distribution 
+library(lattice)
+histogram(initial_size$lnHeight)
+
+# Scatter plot of lnHeight vs lnLeaves
+plot(initial_size$lnHeight, initial_size$lnLeaves, 
+     xlab = "Ln(Initial Height)", ylab = "Ln(Number of Leaves)")
+
+# Linear model with lnHeight as the response and lnLeaves as the predictor - tells us if there is a strong relationship between height and leaves. spoiler there very much is
+height.lvs.lm <- lm(lnHeight ~ lnLeaves, data = initial_size)
+
+# Summary of the linear model
+summary(height.lvs.lm)
+
+# Diagnostic plots for the linear model - Ensures the model is appropriate for the data.
+plot(height.lvs.lm)
+```
+
+There is a relationship which is great!
+
+## Create a data set that has the leaf counts across seasons
+
+```{r}
+
+# Filter the spring24 leaf count data
+spring_leaves <- spring24 |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  select(Tag, Treatment, Leaves, Block) |> 
+  mutate(Season = 'Spring') |>
+  mutate(Lifestage = 'Seedling')
+
+
+# Filter the summer24 leaf count data
+summer_leaves <- summer24 |> 
+  filter(LifeStage == 'Seedling', Treatment != 'NR') |> 
+  select(Tag, Treatment, Leaves, Block) |> 
+  mutate(Season = 'Summer') |>
+  mutate(Lifestage = 'Seedling')
+
+
+# Combine the  datasets
+seedling_leaf_data <- bind_rows(spring_leaves, summer_leaves)
+
+# View the combined data
+print(seedling_leaf_data)
+  
+```
+
+## visualizations
+
+Leaf count across seasons
+
+```{r}
+seedling_leaf_data |>
+
+  ggplot() +
+  aes(x = Season , y = Leaves, fill = Season) +
+  geom_col(position = position_dodge())
+
+ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Tag)) +
+  geom_line() +
+  geom_point() +
+  labs(x = "Season", y = "Leaf Count", title = "Change in Leaf Count Across Seasons") +
+  theme_minimal()
+
+ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Tag)) +
+  geom_line() +
+  geom_point() +
+  facet_wrap(~ Treatment) +  # Or replace with Block or another grouping variable
+  labs(x = "Season", y = "Leaf Count", title = "Change in Leaf Count Across Seasons by Treatment") +
+  theme_minimal()
+
+
+```
+
+## Soil Moisture
+
+```{r}
+
+#spring 2024 soil moisture 
+
+#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
+
+springSM$Treatment <- as.factor(springSM$Treatment)
+springSM$Block <- as.factor(springSM$Block)
+
+
+#plot the data:
+plot(springSM$Treatment, springSM$VWC1, 
+     xlab = "Planting Location", 
+     ylab="Spring 2024 Volumetric Water Content")
+
+
+
+#let's make a new variable, the average of VWC
+
+# Replace NAs with the mean of each VWC column
+springSM <- springSM |>
+  mutate(across(c(VWC1, VWC2, VWC3), ~ ifelse(is.na(.), mean(., na.rm = TRUE), .)))
+
+#-------------------------------------------------------------------------------
+
+# Calculate MeanVWC
+MeanVWC <- springSM |>
+  mutate(MeanVWC = (VWC1 + VWC2 + VWC3) / 3) |>
+  select(MeanVWC, Treatment, Block)
+
+
+#------------------------------------------------------------------------------
+
+
+# Create the bar plot showing mean vwc in each treatment 
+ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content")   # Add labels
+  
+# Create box and whisker graph showing mean vwc in each treatment 
+plot(springSM$Treatment, springSM$MeanVWC, 
+     xlab = "Planting Location", 
+     ylab="Spring 2024 Volumetric Water Content")
+
+#----------------------------------------------------------------------------
+
+#lets do the same for the blocks 
+
+# Create the bar plot showing mean vwc in each block 
+ggplot(data = MeanVWC, aes(x = Block, y = MeanVWC)) +
+  geom_bar(stat = "identity", position = position_dodge()) +  # Ensure you include stat = "identity"
+  labs(x = "Planting Location", y = "Mean Spring 2024 Volumetric Water Content")   # Add labels
+  
+
+#plot(springSM$Block, springSM$MeanVWC, 
+     #xlab="Experimental Block", 
+     #ylab="Spring 2024 Volumetric Water Content")
+
+
+
+```
+
+## Germination
+
+average blocks separate by treatment - effect on treatment
+
+```{r}
+
+```
+
+## Soil
+
+do the soils vary
+
+```{r}
+
+```
+
+do they vary based on micro habitat -\> treatment
+
+```{r}
+
+```
+
+block is a random effect -\> how soils vary based on treatment
+
+```{r}
+
+```
+
+block as a fixed effect do soils vary across site -\> notice yes
+
+```{r}
+
+```
+
+controlling for the variation how do they vary across blocks
+
+```{r}
+
+```
+
+\
+
+## Natural Recruitment EDA
+
+```{r}
+
+```
+
+## Why we planted more Salvia
+
+```{r}
+system("git init")
+system("git config --global user.name 'kelsey-hauf'")
+system("git config --global user.email 'haufkels@gmail.com'")
+```
