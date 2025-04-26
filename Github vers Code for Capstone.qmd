@@ -521,7 +521,7 @@ ggplot(seedling_leaf_data, aes(x = Season, y = Leaves, group = Tag, color = Trea
 
 #spring 2024 soil moisture 
 
-#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
+#If Treatment was previously a character or numeric type, this line changes it to a factor, 
 
 springSM$Treatment <- as.factor(springSM$Treatment)
 springSM$Block <- as.factor(springSM$Block)
@@ -581,8 +581,7 @@ ggplot(data = MeanVWC, aes(x = Treatment, y = MeanVWC)) +
 
 #fall 2024 soil moisture 
 
-#If Treatment was previously a character or numeric type, this line changes it to a factor, which can be important for plotting or running statistical models that require categorical variables.
-
+#If Treatment was previously a character or numeric type, this line changes it to a factor, 
 fallSM$Treatment <- as.factor(fallSM$Treatment)
 fallSM$Block <- as.factor(fallSM$Block)
 
